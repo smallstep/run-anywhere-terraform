@@ -42,13 +42,13 @@ terraform {
 }
 
 provider "aws" {
-  region = local.region
+  region = var.region
 }
 
 provider "kubernetes" {
   host                   = aws_eks_cluster.eks.endpoint
   cluster_ca_certificate = base64decode(aws_eks_cluster.eks.certificate_authority[0].data)
-  config_path            = local.k8s_configs.kube_config_path
+  config_path            = var.k8s_kube_config_path
 
   # Since EKS uses a token with a 15 minute lifetime. Use this exec to keep it up to date.
   exec {
@@ -68,8 +68,8 @@ data "aws_availability_zones" "available" {
 data "aws_region" "current" {}
 
 data "aws_subnet" "public" {
-  count = length(local.subnets_public)
-  id = local.subnets_public[count.index]
+  count = length(var.subnets_public)
+  id = var.subnets_public[count.index]
 }
 
 # ---------------------------------- Variables ----------------------------------------

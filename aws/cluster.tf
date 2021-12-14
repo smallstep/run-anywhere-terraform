@@ -23,19 +23,19 @@ module "eks_base_security_group_rules" {
 }
 
 resource "aws_eks_cluster" "eks" {
-  name     = local.default_name
+  name     = var.default_name
   role_arn = aws_iam_role.eks_cluster.arn
 
   vpc_config {
     endpoint_public_access  = true
     endpoint_private_access = false
     security_group_ids      = [aws_security_group.eks.id]
-    subnet_ids              = local.subnets_private
+    subnet_ids              = var.subnets_private
   }
 
   tags = {
-    Name        = local.default_name
-    Description = local.default_description
+    Name        = var.default_name
+    Description = var.default_description
   }
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
@@ -49,15 +49,15 @@ resource "aws_eks_cluster" "eks" {
 # Node pool to run the Replicated stack
 resource "aws_eks_node_group" "eks" {
   cluster_name    = aws_eks_cluster.eks.name
-  instance_types  = local.k8s_configs.instance_types
-  node_group_name = local.default_name
+  instance_types  = var.k8s_instance_types
+  node_group_name = var.default_name
   node_role_arn   = aws_iam_role.eks_node_group.arn
-  subnet_ids      = local.subnets_private
+  subnet_ids      = var.subnets_private
 
   scaling_config {
-    desired_size = local.k8s_configs.pool_desired
-    max_size     = local.k8s_configs.pool_max
-    min_size     = local.k8s_configs.pool_min
+    desired_size = var.k8s_pool_desired
+    max_size     = var.k8s_pool_max
+    min_size     = var.k8s_pool_min
   }
 
   update_config {
@@ -65,8 +65,8 @@ resource "aws_eks_node_group" "eks" {
   }
 
   tags = {
-    Name        = local.default_name
-    Description = local.default_description
+    Name        = var.default_name
+    Description = var.default_description
   }
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
@@ -79,7 +79,7 @@ resource "aws_eks_node_group" "eks" {
 }
 
 resource "aws_iam_role" "eks_cluster" {
-  name = "${local.default_name}-eks-cluster"
+  name = "${var.default_name}-eks-cluster"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -96,7 +96,7 @@ resource "aws_iam_role" "eks_cluster" {
 }
 
 resource "aws_iam_role" "eks_node_group" {
-  name = "${local.default_name}-eks-node-group"
+  name = "${var.default_name}-eks-node-group"
 
   assume_role_policy = jsonencode({
     Statement = [{
@@ -139,13 +139,13 @@ resource "aws_iam_role_policy_attachment" "eks_node_group_3" {
 
 # Security Group for the cluster and its nodes
 resource "aws_security_group" "eks" {
-  name        = "${local.default_name}-eks"
+  name        = "${var.default_name}-eks"
   vpc_id      = data.aws_subnet.public[0].vpc_id
-  description = local.default_description
+  description = var.default_description
 
   tags = {
-    Name        = "${local.default_name}-eks"
-    Description = local.default_description
+    Name        = "${var.default_name}-eks"
+    Description = var.default_description
   }
 
   lifecycle {
@@ -196,7 +196,7 @@ resource "aws_security_group_rule" "redis_to_eks" {
 
 # Required to enable public load balancing
 resource "null_resource" "allow_public_lb" {
-  for_each = toset(local.subnets_public)
+  for_each = toset(var.subnets_public)
   provisioner "local-exec" {
     command = "aws ec2 create-tags --resources ${each.key} --tags Key=kubernetes.io/role/elb,Value=1"
   }
@@ -205,7 +205,7 @@ resource "null_resource" "allow_public_lb" {
 # EKS will only be able to bind properly to the selected subnets if each includes the following tag.
 # Using a null resource since they aren't managed by this terraform project.
 resource "null_resource" "tag_subnets" {
-  for_each = toset(local.subnets_private)
+  for_each = toset(var.subnets_private)
   provisioner "local-exec" {
     command = "aws ec2 create-tags --resources ${each.key} --tags Key=kubernetes.io/cluster/${aws_eks_cluster.eks.name},Value=shared"
   }
@@ -253,7 +253,7 @@ resource "aws_iam_role" "eks" {
 }
 
 resource "aws_iam_role_policy" "ca_kms" {
-  name = "${local.default_name}-ca-kms"
+  name = "${var.default_name}-ca-kms"
   role = aws_iam_role.eks.id
 
   policy = jsonencode({
