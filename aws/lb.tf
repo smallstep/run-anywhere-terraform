@@ -9,7 +9,7 @@ resource "aws_iam_policy" "load-balancer-policy" {
 }
 
 resource "aws_iam_role_policy" "load-balancer-role-policy" {
-  name = "${local.default_name}-lb-all-nodes"
+  name = "${var.default_name}-lb-all-nodes"
   role = aws_iam_role.eks_node_group.id
 
   policy = file("resources/lb/iam-policy.json")

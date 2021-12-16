@@ -12,127 +12,127 @@ resource "aws_kms_key" "smallstep" {
   enable_key_rotation = false
 
   tags = {
-    Name      = local.default_name
-    ManagedBy = local.default_description
+    Name      = var.default_name
+    ManagedBy = var.default_description
   }
 }
 
 # This secret is procedurally generated and populated by a null resource below
 resource "aws_secretsmanager_secret" "auth_secret" {
-  name                    = "${local.default_name}-auth-secret"
-  description             = "${local.default_name} authentication secret used by EKS"
+  name                    = "${var.default_name}-auth-secret"
+  description             = "${var.default_name} authentication secret used by EKS"
   kms_key_id              = aws_kms_key.smallstep.id
-  recovery_window_in_days = local.backup_retention_period
+  recovery_window_in_days = var.backup_retention_period
 
   tags = {
-    Name        = "${local.default_name}-auth-secret"
-    Description = local.default_description
+    Name        = "${var.default_name}-auth-secret"
+    Description = var.default_description
   }
 }
 
 # This (optional) secret is set by the user by specifying the value of variable hsm_pin in an apply
 resource "aws_secretsmanager_secret" "hsm_pin" {
-  count = local.hsm_enabled == true ? 1 : 0
+  count = var.yubihsm_enabled == true ? 1 : 0
 
-  name                    = "${local.default_name}-hsm-pin"
-  description             = "${local.default_name} pin used by project HSMs"
+  name                    = "${var.default_name}-hsm-pin"
+  description             = "${var.default_name} pin used by project HSMs"
   kms_key_id              = aws_kms_key.smallstep.id
-  recovery_window_in_days = local.backup_retention_period
+  recovery_window_in_days = var.backup_retention_period
 
   tags = {
-    Name        = "${local.default_name}-hsm-pin"
-    Description = local.default_description
+    Name        = "${var.default_name}-hsm-pin"
+    Description = var.default_description
   }
 }
 
 # This secret is procedurally generated and populated by a null resource below
 resource "aws_secretsmanager_secret" "majordomo_secret" {
-  name                    = "${local.default_name}-majordomo-secret"
-  description             = "${local.default_name} secret used by majordomo service in EKS"
+  name                    = "${var.default_name}-majordomo-secret"
+  description             = "${var.default_name} secret used by majordomo service in EKS"
   kms_key_id              = aws_kms_key.smallstep.id
-  recovery_window_in_days = local.backup_retention_period
+  recovery_window_in_days = var.backup_retention_period
 
   tags = {
-    Name        = "${local.default_name}-majordomo-secret"
-    Description = local.default_description
+    Name        = "${var.default_name}-majordomo-secret"
+    Description = var.default_description
   }
 }
 
 # Login info for all databases used by the project
 resource "aws_secretsmanager_secret" "master_password" {
-  name                    = "${local.default_name}-db-login-info"
-  description             = "${local.default_name} database login info used by lambda"
+  name                    = "${var.default_name}-db-login-info"
+  description             = "${var.default_name} database login info used by lambda"
   kms_key_id              = aws_kms_key.smallstep.id
-  recovery_window_in_days = local.backup_retention_period
+  recovery_window_in_days = var.backup_retention_period
 
   tags = {
-    Name        = "${local.default_name}-db-login-info"
-    Description = local.default_description
+    Name        = "${var.default_name}-db-login-info"
+    Description = var.default_description
   }
 }
 
 # Only the db password string for kubernetes secrets
 resource "aws_secretsmanager_secret" "master_password_string" {
-  name                    = "${local.default_name}-db-password"
-  description             = "${local.default_name} database password used by EKS"
+  name                    = "${var.default_name}-db-password"
+  description             = "${var.default_name} database password used by EKS"
   kms_key_id              = aws_kms_key.smallstep.id
-  recovery_window_in_days = local.backup_retention_period
+  recovery_window_in_days = var.backup_retention_period
 
   tags = {
-    Name        = "${local.default_name}-db-password"
-    Description = local.default_description
+    Name        = "${var.default_name}-db-password"
+    Description = var.default_description
   }
 }
 
 # This secret is procedurally generated and populated by /scripts/create_secrets.sh
 resource "aws_secretsmanager_secret" "oidc_jwks" {
-  name                    = "${local.default_name}-oidc-jwks"
-  description             = "${local.default_name} OIDC JWKS public key used by EKS"
+  name                    = "${var.default_name}-oidc-jwks"
+  description             = "${var.default_name} OIDC JWKS public key used by EKS"
   kms_key_id              = aws_kms_key.smallstep.id
-  recovery_window_in_days = local.backup_retention_period
+  recovery_window_in_days = var.backup_retention_period
 
   tags = {
-    Name        = "${local.default_name}-oidc-jwks"
-    Description = local.default_description
+    Name        = "${var.default_name}-oidc-jwks"
+    Description = var.default_description
   }
 }
 
 # There are 2 required user-input passwords: smtp_password & private_issuer_password
 # Pass these in as variables in your first `terraform apply` or you will get errors
 resource "aws_secretsmanager_secret" "private_issuer_password" {
-  name                    = "${local.default_name}-private-issuer-password"
-  description             = "${local.default_name} private issuer password used by EKS"
+  name                    = "${var.default_name}-private-issuer-password"
+  description             = "${var.default_name} private issuer password used by EKS"
   kms_key_id              = aws_kms_key.smallstep.id
-  recovery_window_in_days = local.backup_retention_period
+  recovery_window_in_days = var.backup_retention_period
   
   tags = {
-    Name        = "${local.default_name}-private-issuer-password"
-    Description = local.default_description
+    Name        = "${var.default_name}-private-issuer-password"
+    Description = var.default_description
   }
 }
 
 # Creates an empty secret to be filled in by the user
 resource "aws_secretsmanager_secret" "scim_key" {
-  name                    = "${local.default_name}-scim-key"
-  description             = "${local.default_name} SCIM private key used by EKS"
+  name                    = "${var.default_name}-scim-key"
+  description             = "${var.default_name} SCIM private key used by EKS"
   kms_key_id              = aws_kms_key.smallstep.id
-  recovery_window_in_days = local.backup_retention_period
+  recovery_window_in_days = var.backup_retention_period
 
   tags = {
-    Name        = "${local.default_name}-scim-key"
+    Name        = "${var.default_name}-scim-key"
     Description = "Please modify by hand if using SCIM provisioning."
   }
 }
 
 resource "aws_secretsmanager_secret" "smtp_password" {
-  name                    = "${local.default_name}-smtp-password"
-  description             = "${local.default_name} SMTP password used by EKS"
+  name                    = "${var.default_name}-smtp-password"
+  description             = "${var.default_name} SMTP password used by EKS"
   kms_key_id              = aws_kms_key.smallstep.id
-  recovery_window_in_days = local.backup_retention_period
+  recovery_window_in_days = var.backup_retention_period
 
   tags = {
-    Name        = "${local.default_name}-smtp-password"
-    Description = local.default_description
+    Name        = "${var.default_name}-smtp-password"
+    Description = var.default_description
   }
 }
 
@@ -143,7 +143,7 @@ resource "aws_secretsmanager_secret_version" "auth_secret" {
 }
 
 resource "aws_secretsmanager_secret_version" "hsm_pin" {
-  count = local.hsm_enabled == true ? 1 : 0
+  count = var.yubihsm_enabled == true ? 1 : 0
 
   secret_id     = aws_secretsmanager_secret.hsm_pin[count.index].id
   secret_string = var.hsm_pin

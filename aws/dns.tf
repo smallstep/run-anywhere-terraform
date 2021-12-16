@@ -8,26 +8,26 @@
 # These addresses cannot change at any point so we instantiate an EIP
 resource "aws_eip" "cluster" {
   tags = {
-    Name        = local.default_name
-    Description = local.default_description
+    Name        = var.default_name
+    Description = var.default_description
   }
 }
 
 resource "aws_eip" "cluster-2" {
   tags = {
-    Name        = "${local.default_name}-2"
-    Description = local.default_description
+    Name        = "${var.default_name}-2"
+    Description = var.default_description
   }
 }
 
 # Set up a hosted zone in Route53 and subsequent records routing to the above IP
 resource "aws_route53_zone" "cluster" {
-  name    = local.base_domain
+  name    = var.base_domain
   comment = "Hosted zone routing traffic to the smallstep cluster"
 
   tags = {
-    Name        = local.default_name
-    Description = local.default_description
+    Name        = var.default_name
+    Description = var.default_description
   }
 }
 

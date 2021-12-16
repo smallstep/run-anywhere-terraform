@@ -13,7 +13,7 @@ data "aws_secretsmanager_secret_version" "auth_secret" {
 }
 
 data "aws_secretsmanager_secret_version" "hsm_pin" {
-  count = local.hsm_enabled == true ? 1 : 0
+  count = var.yubihsm_enabled == true ? 1 : 0
 
   secret_id = aws_secretsmanager_secret.hsm_pin[count.index].id
   depends_on = [
@@ -67,7 +67,7 @@ data "aws_secretsmanager_secret_version" "smtp_password" {
 
 resource "kubernetes_namespace" "install_namespace" {
   metadata {
-    name = local.k8s_configs.namespace
+    name = var.k8s_namespace
 
     annotations = {
       "linkerd.io/inject" = "enabled"
@@ -78,7 +78,7 @@ resource "kubernetes_namespace" "install_namespace" {
 resource "kubernetes_secret" "auth" {
   metadata {
     name      = "auth"
-    namespace = local.k8s_configs.namespace
+    namespace = var.k8s_namespace
   }
   data = {
     secret = data.aws_secretsmanager_secret_version.auth_secret.secret_string
@@ -86,11 +86,11 @@ resource "kubernetes_secret" "auth" {
 }
 
 resource "kubernetes_secret" "hsm_pin" {
-  count = local.hsm_enabled == true ? 1 : 0
+  count = var.yubihsm_enabled == true ? 1 : 0
 
   metadata {
     name      = "yubihsm2-pin"
-    namespace = local.k8s_configs.namespace
+    namespace = var.k8s_namespace
   }
   data = {
     "pin.txt" = data.aws_secretsmanager_secret_version.hsm_pin[count.index].secret_string
@@ -100,7 +100,7 @@ resource "kubernetes_secret" "hsm_pin" {
 resource "kubernetes_secret" "majordomo" {
   metadata {
     name      = "majordomo-provisioner-password"
-    namespace = local.k8s_configs.namespace
+    namespace = var.k8s_namespace
   }
   data = {
     password = data.aws_secretsmanager_secret_version.majordomo_secret.secret_string
@@ -110,7 +110,7 @@ resource "kubernetes_secret" "majordomo" {
 resource "kubernetes_secret" "oidc" {
   metadata {
     name      = "oidc"
-    namespace = local.k8s_configs.namespace
+    namespace = var.k8s_namespace
   }
   data = {
     jwks = data.aws_secretsmanager_secret_version.oidc_jwks.secret_string
@@ -120,7 +120,7 @@ resource "kubernetes_secret" "oidc" {
 resource "kubernetes_secret" "postgresql" {
   metadata {
     name      = "postgresql"
-    namespace = local.k8s_configs.namespace
+    namespace = var.k8s_namespace
   }
   data = {
     password = data.aws_secretsmanager_secret_version.postgresql_password.secret_string
@@ -130,7 +130,7 @@ resource "kubernetes_secret" "postgresql" {
 resource "kubernetes_secret" "private_issuer" {
   metadata {
     name      = "private-issuer"
-    namespace = local.k8s_configs.namespace
+    namespace = var.k8s_namespace
   }
   data = {
     password = data.aws_secretsmanager_secret_version.private_issuer_password.secret_string
@@ -140,7 +140,7 @@ resource "kubernetes_secret" "private_issuer" {
 resource "kubernetes_secret" "scim" {
   metadata {
     name      = "scim-server-secrets"
-    namespace = local.k8s_configs.namespace
+    namespace = var.k8s_namespace
   }
   data = {
     "credentials.json" = data.aws_secretsmanager_secret_version.scim_key.secret_string
@@ -150,7 +150,7 @@ resource "kubernetes_secret" "scim" {
 resource "kubernetes_secret" "smtp" {
   metadata {
     name      = "smtp"
-    namespace = local.k8s_configs.namespace
+    namespace = var.k8s_namespace
   }
   data = {
     password = data.aws_secretsmanager_secret_version.smtp_password.secret_string
