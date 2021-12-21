@@ -8,37 +8,27 @@
 
 # ------------------------------- Providers ----------------------------------------
 terraform {
-  # State for this project will be stored in a dedicated S3 bucket
-  backend "s3" {
-    encrypt        = true
-    bucket         = "smallstep-terraform-state"
-    key            = "smallstep/terraform.tfstate"
-    region         = "us-west-1"
-  }
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.0"
+      version = ">= 3.0"
     }
 
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.6"
+      version = ">= 2.6"
     }
 
     null = {
       source  = "hashicorp/null"
-      version = "~> 3.1"
+      version = ">= 3.1"
     }
 
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.1"
+      version = ">= 3.1"
     }
   }
-
-  required_version = ">=1.0.2"
 }
 
 provider "aws" {
@@ -70,40 +60,4 @@ data "aws_region" "current" {}
 data "aws_subnet" "public" {
   count = length(var.subnets_public)
   id = var.subnets_public[count.index]
-}
-
-# ---------------------------------- Variables ----------------------------------------
-
-# -------------------------------------------------------------------------------------
-#                                !!! IMPORTANT !!!  
-# -------------------------------------------------------------------------------------
-# When running first apply set: terraform apply -var smtp_password="<value>" \
-#                                               -var private_issuer_password="<value>" 
-#                                               
-#                                               (if you set `hsm_enabled = true`) \
-#                                               -var hsm_pin="<value"
-# -------------------------------------------------------------------------------------
-# Subsequent applies will not require you to set these variables, as changes
-# will be ignored.
-# -------------------------------------------------------------------------------------
-
-variable "private_issuer_password" {
-  description = "The private issuer password used by the create_secrets.sh script."
-  default     = ""
-  type        = string
-  sensitive   = true
-}
-
-variable "smtp_password" {
-  description = "The SMTP password used by the create_secrets.sh script."
-  default     = ""
-  type        = string
-  sensitive   = true
-}
-
-variable "hsm_pin" {
-  description = "The PIN used for your HSMs, only used when setting up with HSM support"
-  default     = ""
-  type        = string
-  sensitive   = true
 }

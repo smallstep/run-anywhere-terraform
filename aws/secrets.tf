@@ -30,8 +30,8 @@ resource "aws_secretsmanager_secret" "auth_secret" {
   }
 }
 
-# This (optional) secret is set by the user by specifying the value of variable hsm_pin in an apply
-resource "aws_secretsmanager_secret" "hsm_pin" {
+# This (optional) secret is set by the user by specifying the value of variable yubihsm_pin in an apply
+resource "aws_secretsmanager_secret" "yubihsm_pin" {
   count = var.yubihsm_enabled == true ? 1 : 0
 
   name                    = "${var.default_name}-hsm-pin"
@@ -142,11 +142,11 @@ resource "aws_secretsmanager_secret_version" "auth_secret" {
   secret_string = random_password.auth_secret.result
 }
 
-resource "aws_secretsmanager_secret_version" "hsm_pin" {
+resource "aws_secretsmanager_secret_version" "yubihsm_pin" {
   count = var.yubihsm_enabled == true ? 1 : 0
 
-  secret_id     = aws_secretsmanager_secret.hsm_pin[count.index].id
-  secret_string = var.hsm_pin
+  secret_id     = aws_secretsmanager_secret.yubihsm_pin[count.index].id
+  secret_string = var.yubihsm_pin
 
   # This variable will only be set the first time running terraform and will change to ""
   # Don't wipe the password when this happens

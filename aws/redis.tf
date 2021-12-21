@@ -26,6 +26,7 @@ locals {
 # Defaults to only allowing these rules internal to the VPC
 module "redis_base_security_group_rules" {
   source            = "./base_security_group_rules"
+  public_facing     = var.security_groups_public
   security_group_id = aws_security_group.redis.id
 }
 

@@ -9,6 +9,10 @@ data "aws_eks_cluster_auth" "eks" {
   name = aws_eks_cluster.eks.name
 }
 
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.eks.identity[0].oidc[0].issuer
+}
+
 locals {
   public_cidrs = concat(data.aws_subnet.public[*].cidr_block)
 }
@@ -18,7 +22,7 @@ locals {
 # Defaults to only allowing these rules internal to the VPC
 module "eks_base_security_group_rules" {
   source            = "./base_security_group_rules"
-  # public_facing     = true
+  public_facing     = var.security_groups_public
   security_group_id = aws_security_group.eks.id
 }
 
@@ -78,6 +82,12 @@ resource "aws_eks_node_group" "eks" {
   ]
 }
 
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.eks.identity[0].oidc[0].issuer
+}
+
 resource "aws_iam_role" "eks_cluster" {
   name = "${var.default_name}-eks-cluster"
 
@@ -107,6 +117,51 @@ resource "aws_iam_role" "eks_node_group" {
       }
     }]
     Version = "2012-10-17"
+  })
+}
+
+resource "aws_iam_role" "eks_service_account" {
+  name_prefix        = "${var.default_name}-service-account"
+  assume_role_policy = data.aws_iam_policy_document.eks_service_account.json
+}
+
+data "aws_iam_policy_document" "eks_service_account" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:smallstep:landlord"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    principals {
+      identifiers = [aws_iam_openid_connect_provider.eks.arn]
+      type        = "Federated"
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "eks_service_account" {
+  name = "${var.default_name}-ca-kms"
+  role = aws_iam_role.eks_service_account.arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = ["kms:GetPublicKey", "kms:TagResource", "kms:CreateAlias", "kms:CreateKey", "kms:Sign"]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
   })
 }
 
@@ -209,61 +264,4 @@ resource "null_resource" "tag_subnets" {
   provisioner "local-exec" {
     command = "aws ec2 create-tags --resources ${each.key} --tags Key=kubernetes.io/cluster/${aws_eks_cluster.eks.name},Value=shared"
   }
-}
-
-# OIDC Provider
-
-data "tls_certificate" "eks" {
-  url = aws_eks_cluster.eks.identity[0].oidc[0].issuer
-}
-
-resource "aws_iam_openid_connect_provider" "eks" {
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
-  url             = aws_eks_cluster.eks.identity[0].oidc[0].issuer
-}
-
-data "aws_iam_policy_document" "eks_policy" {
-  statement {
-    actions = ["sts:AssumeRoleWithWebIdentity"]
-    effect  = "Allow"
-
-    condition {
-      test     = "StringEquals"
-      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
-      values   = ["system:serviceaccount:smallstep:landlord"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud"
-      values   = ["sts.amazonaws.com"]
-    }
-
-    principals {
-      identifiers = [aws_iam_openid_connect_provider.eks.arn]
-      type        = "Federated"
-    }
-  }
-}
-
-resource "aws_iam_role" "eks" {
-  assume_role_policy = data.aws_iam_policy_document.eks_policy.json
-  name               = "eks"
-}
-
-resource "aws_iam_role_policy" "ca_kms" {
-  name = "${var.default_name}-ca-kms"
-  role = aws_iam_role.eks.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action   = ["kms:GetPublicKey", "kms:TagResource", "kms:CreateAlias", "kms:CreateKey", "kms:Sign"]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-    ]
-  })
 }
