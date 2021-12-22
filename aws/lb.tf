@@ -1,6 +1,10 @@
-# AWS load balancer controller
+#----------------------------------------------------------------------------------
+# 
+# This file is where we set up resources to support the EKS LB Controller
+# 
+#----------------------------------------------------------------------------------
 
-resource "aws_iam_policy" "load-balancer-policy" {
+resource "aws_iam_policy" "load_balancer_policy" {
   name        = "AWSLoadBalancerControllerIAMPolicy"
   path        = "/"
   description = "AWS LoadBalancer Controller IAM Policy"
@@ -8,16 +12,14 @@ resource "aws_iam_policy" "load-balancer-policy" {
   policy = file("resources/lb/iam-policy.json")
 }
 
-resource "aws_iam_role_policy" "load-balancer-role-policy" {
+resource "aws_iam_role_policy" "load_balancer_role_policy" {
   name = "${var.default_name}-lb-all-nodes"
   role = aws_iam_role.eks_node_group.id
 
   policy = file("resources/lb/iam-policy.json")
 }
 
-resource "null_resource" "post-policy" {
-  depends_on=[aws_eks_cluster.eks, aws_iam_policy.load-balancer-policy]
-
+resource "null_resource" "post_policy" {
   triggers = {
     always_run = timestamp()
   }
@@ -35,4 +37,6 @@ resource "null_resource" "post-policy" {
         echo "done"
      EOT
   }
+
+  depends_on = [aws_eks_cluster.eks, aws_iam_policy.load_balancer_policy]
 }

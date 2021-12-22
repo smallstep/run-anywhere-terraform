@@ -1,9 +1,20 @@
-#---------------------------------------------------------------------------------- 
+#-------------------------------------------------------------------------------------- 
 # 
-# This file funtions as the source of high-level `data`, `local`, and `variable`
-# resource types for the AWS Onprem Terraform Project.
+# This file hosts all variable resources for the AWS Run Anywhere deployment.
 # 
-#----------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------
+#                                !!! IMPORTANT !!!  
+# -------------------------------------------------------------------------------------
+# When running first apply set: terraform apply -var smtp_password="<value>" \
+#                                               -var private_issuer_password="<value>" 
+#                                               
+#                                               (if you set `yubihsm_enabled = true`) \
+#                                               -var yubihsm_pin="<value"
+# -------------------------------------------------------------------------------------
+# Subsequent applies will not require you to set these variables, as changes
+# will be ignored.
+# -------------------------------------------------------------------------------------
 
 variable "backup_retention_period" {
   default     = 30
@@ -28,37 +39,6 @@ variable "default_name" {
   type        = string
 }
 
-variable "yubihsm_enabled" {
-  default     = false
-  description = "If the CA keys used are backed by a YubiHSM2, set to true."
-  type        = bool
-}
-
-variable "region" {
-  description = "AWS region used by all project resources"
-  type        = string
-}
-
-variable "subnets_private" {
-  description = "List of private subnets used by project compute resources. Must either have a NAT gateway or appropriate VPC Endpoints."
-  type        = list(string)
-
-  validation {
-    condition     = length(var.subnets_private) > 1
-    error_message = "Must use 2 or more private subnets."
-  }
-}
-
-variable "subnets_public" {
-  description = "List of public subnets used by NLB for the project."
-  type        = list(string)
-
-  validation {
-    condition     = length(var.subnets_public) > 1
-    error_message = "Must use 2 or more public subnets."
-  }
-}
-
 # https://aws.amazon.com/ec2/instance-types/
 variable "k8s_instance_types" {
   default     = ["t3.large"]
@@ -75,7 +55,7 @@ variable "k8s_kube_config_path" {
 variable "k8s_namespace" {
   default     = "smallstep"
   description = "Namespace in the EKS cluster where the CA pods where deploy."
-  type        = "string"
+  type        = string
 }
 
 variable "k8s_pool_desired" {
@@ -94,6 +74,12 @@ variable "k8s_pool_min" {
   default     = 3
   description = "Minimum number of instances for the EKS Node Pool."
   type        = number
+}
+
+variable "private_issuer_password" {
+  description = "The private issuer password used by the create_secrets.sh script."
+  type        = string
+  sensitive   = true
 }
 
 variable "redis_cache_clusters" {
@@ -195,7 +181,7 @@ variable "rds_engine_version" {
   type        = number
 
   validation {
-    condition = var.rds_engine_version >= 11
+    condition     = var.rds_engine_version >= 11
     error_message = "Minimum allowed PostgreSQL version is 11."
   }
 }
@@ -229,6 +215,61 @@ variable "rds_transaction_timeout" {
   default     = 300000
   description = "Timeout period (milliseconds) for any connection to the Aurora cluster - prevents hanging connections."
   type        = number
+}
+
+variable "region" {
+  description = "AWS region used by all project resources."
+  type        = string
+}
+
+variable "security_groups_public" {
+  default     = false
+  description = "Security groups for the module can be set to allow public ICMP connections for testing purposes."
+  type        = bool
+}
+
+variable "smtp_password" {
+  description = "The SMTP password used by the create_secrets.sh script."
+  type        = string
+  sensitive   = true
+}
+
+variable "subnets_private" {
+  description = "List of private subnets used by project compute resources. Must either have a NAT gateway or appropriate VPC Endpoints."
+  type        = list(string)
+
+  validation {
+    condition     = length(var.subnets_private) > 1
+    error_message = "Must use 2 or more private subnets."
+  }
+}
+
+variable "subnets_public" {
+  description = "List of public subnets used by NLB for the project."
+  type        = list(string)
+
+  validation {
+    condition     = length(var.subnets_public) > 1
+    error_message = "Must use 2 or more public subnets."
+  }
+}
+
+variable "yubihsm_enabled" {
+  default     = false
+  description = "If the CA keys used are backed by a YubiHSM2, set to true."
+  type        = bool
+}
+
+variable "yubihsm_pin" {
+  description = "The PIN used for your HSMs, only used when setting up with HSM support."
+  default     = ""
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^0x[0-9A-Fa-f]{4}.*$", var.yubihsm_pin))
+    error_message = "Must provide a 4 digit pin in hexadecimal proceeded with the password."
+  }
 }
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------

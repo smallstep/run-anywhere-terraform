@@ -12,12 +12,12 @@ data "aws_secretsmanager_secret_version" "auth_secret" {
   ]
 }
 
-data "aws_secretsmanager_secret_version" "hsm_pin" {
+data "aws_secretsmanager_secret_version" "yubihsm_pin" {
   count = var.yubihsm_enabled == true ? 1 : 0
 
-  secret_id = aws_secretsmanager_secret.hsm_pin[count.index].id
+  secret_id = aws_secretsmanager_secret.yubihsm_pin[count.index].id
   depends_on = [
-    aws_secretsmanager_secret_version.hsm_pin
+    aws_secretsmanager_secret_version.yubihsm_pin
   ]
 }
 
@@ -85,7 +85,7 @@ resource "kubernetes_secret" "auth" {
   }
 }
 
-resource "kubernetes_secret" "hsm_pin" {
+resource "kubernetes_secret" "yubihsm_pin" {
   count = var.yubihsm_enabled == true ? 1 : 0
 
   metadata {
@@ -93,7 +93,7 @@ resource "kubernetes_secret" "hsm_pin" {
     namespace = var.k8s_namespace
   }
   data = {
-    "pin.txt" = data.aws_secretsmanager_secret_version.hsm_pin[count.index].secret_string
+    "pin.txt" = data.aws_secretsmanager_secret_version.yubihsm_pin[count.index].secret_string
   }
 }
 
