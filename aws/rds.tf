@@ -17,7 +17,7 @@ locals {
   # will not need to change
   db_names         = ["landlord", "certificates", "web", "depot", "folk", "memoir", "majordomo", "moody", "courier"]
 
-  cw_logging_value = var.rds_enable_cloudwatch_logging == true ? ["postgresql"] : ""
+  cw_logging_value = var.rds_enable_cloudwatch_logging == true ? ["postgresql"] : [""]
 
   # All information needed to log into a database cluster
   # Will be stored in SecretsManager
@@ -29,7 +29,7 @@ locals {
     port          = var.rds_port
   }
 
-  rds_default_params = var.rds_enable_cloudwatch_logging == true ? locals.rds_logging_params : locals.rds_non_logging_params
+  rds_default_params = var.rds_enable_cloudwatch_logging == true ? local.rds_logging_params : local.rds_non_logging_params
 
   # If we're going to set up logs for Aurora, the following are what we need to make sure everything works
   rds_logging_params = [
@@ -78,7 +78,7 @@ resource "aws_db_parameter_group" "smallstep" {
   name   = var.default_name
   family = "aurora-postgresql${split(".", var.rds_engine_version)[0]}"
 
-  parameters = concat(local.rds_default_params, var.rds_desired_params)
+  parameter = concat(local.rds_default_params, var.rds_desired_params)
 }
 
 resource "aws_lambda_function" "make_dbs" {

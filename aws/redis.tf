@@ -35,7 +35,7 @@ module "redis_base_security_group_rules" {
 # Add additional setting as needed.
 resource "aws_elasticache_parameter_group" "redis" {
   name   = var.default_name
-  family = var.redis_configs.family
+  family = var.redis_family
 
   parameters = concat(local.redis_default_params, var.redis_desired_params)
 }
