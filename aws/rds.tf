@@ -78,7 +78,16 @@ resource "aws_db_parameter_group" "smallstep" {
   name   = var.default_name
   family = "aurora-postgresql${split(".", var.rds_engine_version)[0]}"
 
-  parameter {concat(local.rds_default_params, var.rds_desired_params)}
+  # parameters = concat(local.rds_default_params, var.rds_desired_params)
+  # parameters = local.rds_default_params
+  dynamic "parameter" {
+    for_each = concat(local.rds_default_params, var.rds_desired_params)
+    content {
+      name         = parameter.value.name
+      value        = parameter.value.value
+      apply_method = lookup(parameter.value, "apply_method", null)
+    }
+  }
 }
 
 resource "aws_lambda_function" "make_dbs" {
