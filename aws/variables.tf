@@ -9,7 +9,7 @@
 # When running first apply set: terraform apply -var smtp_password="<value>" \
 #                                               -var private_issuer_password="<value>" 
 #                                               
-#                                               (if you set `yubihsm_enabled = true`) \
+#                                               (Optional)
 #                                               -var yubihsm_pin="<value"
 # -------------------------------------------------------------------------------------
 # Subsequent applies will not require you to set these variables, as changes

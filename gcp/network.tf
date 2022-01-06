@@ -66,7 +66,3 @@ resource "google_service_networking_connection" "servicenetworking" {
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.service_allocation.name]
 }
-
-output "smallstep_ingress" {
-  value = google_compute_address.smallstep_address.address
-}
