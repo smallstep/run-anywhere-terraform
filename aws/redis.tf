@@ -37,7 +37,7 @@ resource "aws_elasticache_parameter_group" "redis" {
   name   = var.default_name
   family = var.redis_family
 
-  parameter = {concat(local.redis_default_params, var.redis_desired_params)}
+  parameter = concat(local.redis_default_params, var.redis_desired_params)
 }
 
 # Replication Group will create the underlying redis instances
