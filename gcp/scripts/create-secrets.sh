@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # define key names for each secret
 declare -A SECRETS
 SECRETS[postgresql]=password
