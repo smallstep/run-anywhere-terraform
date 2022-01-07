@@ -14,7 +14,7 @@ output "eks_kubeconfig_certificate_authority_data" {
 }
 
 output "ingress_eip" {
-  value = aws_eip.cluster.public_ip
+  value = concat(aws_eip.cluster[*].public_ip)
 }
 
 output "rds_cluster_endpoint" {
