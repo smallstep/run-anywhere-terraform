@@ -83,27 +83,3 @@ resource "google_dns_record_set" "tunnel" {
   managed_zone = google_dns_managed_zone.default.name
   rrdatas      = [google_compute_address.smallstep_address.address]
 }
-
-output "zone" {
-  value = google_dns_managed_zone.default.dns_name
-}
-
-output "name_servers" {
-  value = google_dns_managed_zone.default.name_servers
-}
-
-output "base_domain" {
-  value = trimsuffix(google_dns_managed_zone.default.dns_name, ".")
-}
-
-output "api_domain" {
-  value = trimsuffix(google_dns_record_set.web_api.name, ".")
-}
-
-output "gateway_domain" {
-  value = trimsuffix(google_dns_record_set.web_api_gateway.name, ".")
-}
-
-output "scim_domain" {
-  value = trimsuffix(google_dns_record_set.web_api_scim.name, ".")
-}

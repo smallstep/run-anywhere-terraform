@@ -25,35 +25,17 @@ function generate_oidc_jwks() {
 function create_terraform_secret() {
     echo -e "\nEncrypting terraform secret $1.enc..."
     if [ ! -f $dir/../secrets/$1.enc ]; then
-        gcloud kms encrypt --project $gcp_project_id --location global --keyring smallstep-terraform --key terraform-secret --plaintext-file=$2 --ciphertext-file=$dir/../secrets/$1.enc
+        gcloud kms encrypt --project $gcp_project_id --location global --keyring $keyring_name --key $key_name --plaintext-file=$2 --ciphertext-file=$dir/../secrets/$1.enc
     else
         echo -e "Skipping secret creation for $1.enc (already exists)..."
     fi
 }
-# prompt for GCP project id
-read -p "GCP project ID: " gcp_project_id
-export GCP_PROJECT=$gcp_project_id
-
-# prompt for smtp password
-if [ ! -f $dir/../secrets/smtp_password.enc ]; then
-  read -sp "SMTP password: " smtp_password
-fi
-
-# prompt for private-issuer provisioner password
-if [ ! -f $dir/../secrets/private-issuer_password.enc ]; then
-    read -sp "private-issuer provisioner password (skip unless needed for custom public TLS): " private_issuer_password
-fi
-
-# prompt for YubiHSM2 pin
-if [ ! -f $dir/../secrets/yubihsm2_pin.enc ]; then
-    read -sp "YubiHSM2 PIN (skip unless using YubiHSM2): " yubihsm2_pin
-fi
 
 echo -e "\n"
 
 # create the keyring and key for terraform
-gcloud kms keyrings create smallstep-terraform --project $gcp_project_id --location global 2> /dev/null || true
-gcloud kms keys create terraform-secret --keyring smallstep-terraform --project $gcp_project_id --location global --purpose "encryption" 2> /dev/null || true
+gcloud kms keyrings create $keyring_name --project $gcp_project_id --location global 2> /dev/null || true
+gcloud kms keys create $key_name --keyring $keyring_name --project $gcp_project_id --location global --purpose "encryption" 2> /dev/null || true
 
 # create encrypted terraform secrets
 create_terraform_secret postgresql_password <(generate_secret)

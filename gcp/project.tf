@@ -9,6 +9,20 @@ data "google_compute_default_service_account" "default" {
   depends_on = [google_project_service.compute]
 }
 
+// The keys used to encrypt project configuration secrets can't themselves
+// be project resources.
+data "google_kms_key_ring" "keys" {
+  project  = var.project_id
+  location = "global"
+  name     = "smallstep-terraform"
+}
+
+// This is the secret used to decrypt encrypted secrets in this repo
+data "google_kms_crypto_key" "terraform_secret" {
+  key_ring = data.google_kms_key_ring.keys.self_link
+  name     = "terraform-secret"
+}
+
 resource "google_project_service" "compute" {
   project = var.project_id
   service = "compute.googleapis.com"
@@ -85,21 +99,18 @@ resource "google_project_service" "cloudsqladmin" {
   service = "sqladmin.googleapis.com"
 }
 
-// The keys used to encrypt project configuration secrets can't themselves
-// be project resources.
-data "google_kms_key_ring" "keys" {
-  project  = var.project_id
-  location = "global"
-  name     = "smallstep-terraform"
-}
+# Creates the KMS key and generates client secrets for the key to encrypt
+resource "null_resource" "generate_oidc_jwk" {
+  provisioner "local-exec" {
+    command     = "./scripts/create-secrets.sh"
 
-// This is the secret used to decrypt encrypted secrets in this repo
-data "google_kms_crypto_key" "terraform_secret" {
-  key_ring = data.google_kms_key_ring.keys.self_link
-  name     = "terraform-secret"
+    environment = {
+      key_name                = var.key_name
+      keyring_name            = var.keyring_name
+      gcp_project_id          = var.project_id
+      smtp_password           = var.smtp_password
+      private_issuer_password = var.private_issuer_password
+      yubihsm_pin             = var.yubihsm_pin
+    }
+  } 
 }
-
-output "project_id" {
-  value = var.project_id
-}
-

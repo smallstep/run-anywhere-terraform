@@ -44,18 +44,7 @@ resource "google_project_iam_member" "landlord_kms_verifier" {
   member  = "serviceAccount:${google_service_account.landlord.email}"
 }
 
-output "service_account_landlord" {
-  value = google_service_account.landlord.email
-}
-
-// Magpie service account
-
-output "service_account_magpie" {
-  value = google_service_account.magpie.email
-}
-
 // web-api workload identity and roles
-
 resource "google_service_account" "web_api" {
   project      = var.project_id
   account_id   = "web-api"
@@ -72,7 +61,6 @@ resource "google_service_account_iam_binding" "web_api_workload_identity" {
 }
 
 // web-frontend workload identity and roles
-
 resource "google_service_account" "web_frontend" {
   project      = var.project_id
   account_id   = "web-frontend"
@@ -110,16 +98,11 @@ resource "google_service_account_iam_binding" "scim_server_workload_identity" {
   depends_on = [google_container_cluster.primary]
 }
 
-output "gsuite_service_account_id" {
-  value = google_service_account.scim_server.unique_id
-}
-
 resource "google_service_account_key" "scim_server_key" {
   service_account_id = google_service_account.scim_server.name
 }
 
 // Majordomo workload identity and roles
-
 resource "google_service_account" "majordomo" {
   project = var.project_id
   account_id   = "majordomo"
@@ -143,7 +126,6 @@ resource "google_service_account_iam_binding" "majordomo_workload_identity" {
 }
 
 // Moody workload identity and roles
-
 resource "google_service_account" "moody" {
   project = var.project_id
   // 'moody' is too short to pass validation rules, hence 'moody-acc'
@@ -168,7 +150,6 @@ resource "google_service_account_iam_binding" "moody_workload_identity" {
 }
 
 // Magpie workload identity and roles
-
 resource "google_service_account" "magpie" {
   project      = var.project_id
   account_id   = "magpie"

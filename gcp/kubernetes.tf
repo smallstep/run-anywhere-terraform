@@ -4,18 +4,6 @@
 # 
 #--------------------------------------------------------------------------------------
 
-resource "kubernetes_namespace" "install_namespace" {
-  metadata {
-    name = var.namespace
-
-    annotations = {
-      "linkerd.io/inject" = "enabled"
-    }
-  }
-
-  depends_on  = [google_container_cluster.primary]
-}
-
 data "google_kms_secret" "auth_secret" {
   crypto_key = data.google_kms_crypto_key.terraform_secret.self_link
   ciphertext = filebase64("secrets/auth_secret.enc")
@@ -44,6 +32,18 @@ data "google_kms_secret" "private_issuer_password" {
 data "google_kms_secret" "yubihsm2_pin" {
   crypto_key = data.google_kms_crypto_key.terraform_secret.self_link
   ciphertext = filebase64("secrets/yubihsm2_pin.enc")
+}
+
+resource "kubernetes_namespace" "install_namespace" {
+  metadata {
+    name = var.namespace
+
+    annotations = {
+      "linkerd.io/inject" = "enabled"
+    }
+  }
+
+  depends_on  = [google_container_cluster.primary]
 }
 
 resource "kubernetes_secret" "scim-server-credentials" {

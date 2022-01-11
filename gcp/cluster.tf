@@ -76,14 +76,14 @@ resource "google_container_node_pool" "primary" {
       node_metadata = "GKE_METADATA_SERVER"
     }
   }
-  node_count = 2
+  node_count = var.node_count
   management {
-    auto_repair  = true
-    auto_upgrade = true
+    auto_repair  = var.node_auto_repair
+    auto_upgrade = var.node_auto_upgrade
   }
   upgrade_settings {
-    max_surge       = 5
-    max_unavailable = 0
+    max_surge       = var.node_max_surge_count
+    max_unavailable = var.node_max_unavailable
 
   }
 }

@@ -8,21 +8,9 @@ resource "google_redis_instance" "smallstep" {
   project            = var.project_id
   depends_on         = [google_project_service.redis]
   region             = var.region
-  redis_version      = "REDIS_4_0"
-  tier               = "BASIC"
+  redis_version      = var.redis_version
+  tier               = var.redis_tier
   name               = "smallstep"
-  memory_size_gb     = 1
+  memory_size_gb     = var.redis_memory_size_gb
   authorized_network = data.google_compute_network.default.self_link
-}
-
-output "redis_host" {
-  value = google_redis_instance.smallstep.host
-}
-
-output "redis_port" {
-  value = google_redis_instance.smallstep.port
-}
-
-output "redis_addr" {
-  value = "${google_redis_instance.smallstep.host}:${google_redis_instance.smallstep.port}"
 }
