@@ -10,6 +10,7 @@
 #                                               -var private_issuer_password="<value>" 
 #                                               
 #                                               (Optional)
+#                                               (if you set `yubihsm_enabled = true`) \
 #                                               -var yubihsm_pin="<value"
 # -------------------------------------------------------------------------------------
 # Subsequent applies will not require you to set these variables, as changes
@@ -17,7 +18,7 @@
 # -------------------------------------------------------------------------------------
 
 variable "backup_retention_period" {
-  default     = 30
+  default     = 7
   description = "Number of days to retain logs and grace period for deleting secrets/keys."
   type        = number
 }
@@ -267,7 +268,7 @@ variable "yubihsm_pin" {
   sensitive   = true
 
   validation {
-    condition     = can(regex("^0x[0-9A-Fa-f]{4}.*$", var.yubihsm_pin))
+    condition     = can(regex("(^0x[0-9A-Fa-f]{4}.*$)|^$", var.yubihsm_pin))
     error_message = "Must provide a 4 digit pin in hexadecimal proceeded with the password."
   }
 }

@@ -151,7 +151,7 @@ data "aws_iam_policy_document" "eks_service_account" {
 
 resource "aws_iam_role_policy" "eks_service_account" {
   name = "${var.default_name}-ca-kms"
-  role = aws_iam_role.eks_service_account.arn
+  role = aws_iam_role.eks_service_account.name
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -255,6 +255,18 @@ resource "null_resource" "allow_public_lb" {
   provisioner "local-exec" {
     command = "aws ec2 create-tags --resources ${each.key} --tags Key=kubernetes.io/role/elb,Value=1"
   }
+}
+
+# Pull down the kube config file after the cluster's been fulling created
+resource "null_resource" "kube_config" {
+  provisioner "local-exec" {
+    command = "aws eks --region ${var.region} update-kubeconfig --name ${aws_eks_cluster.eks.name}"
+  }
+
+  depends_on = [
+    aws_eks_cluster.eks,
+    aws_eks_node_group.eks
+  ]
 }
 
 # EKS will only be able to bind properly to the selected subnets if each includes the following tag.

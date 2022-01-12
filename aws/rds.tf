@@ -55,7 +55,7 @@ locals {
     },
     {
       name  = "rds.log_retention_period"
-      value = "${var.backup_retention_period} * 1440"
+      value = "${var.backup_retention_period}" * 1440
     }
   ]
 
