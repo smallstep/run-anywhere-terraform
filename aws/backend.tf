@@ -38,7 +38,6 @@ provider "aws" {
 provider "kubernetes" {
   host                   = aws_eks_cluster.eks.endpoint
   cluster_ca_certificate = base64decode(aws_eks_cluster.eks.certificate_authority[0].data)
-  # config_path            = var.k8s_kube_config_path
 
   # Since EKS uses a token with a 15 minute lifetime. Use this exec to keep it up to date.
   exec {
