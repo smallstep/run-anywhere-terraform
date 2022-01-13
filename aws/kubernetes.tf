@@ -83,6 +83,10 @@ resource "kubernetes_secret" "auth" {
   data = {
     secret = data.aws_secretsmanager_secret_version.auth_secret.secret_string
   }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
 }
 
 resource "kubernetes_secret" "yubihsm_pin" {
@@ -95,6 +99,10 @@ resource "kubernetes_secret" "yubihsm_pin" {
   data = {
     "pin.txt" = data.aws_secretsmanager_secret_version.yubihsm_pin[count.index].secret_string
   }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
 }
 
 resource "kubernetes_secret" "majordomo" {
@@ -105,6 +113,10 @@ resource "kubernetes_secret" "majordomo" {
   data = {
     password = data.aws_secretsmanager_secret_version.majordomo_secret.secret_string
   }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
 }
 
 resource "kubernetes_secret" "oidc" {
@@ -115,6 +127,10 @@ resource "kubernetes_secret" "oidc" {
   data = {
     jwks = data.aws_secretsmanager_secret_version.oidc_jwks.secret_string
   }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
 }
 
 resource "kubernetes_secret" "postgresql" {
@@ -125,6 +141,10 @@ resource "kubernetes_secret" "postgresql" {
   data = {
     password = data.aws_secretsmanager_secret_version.postgresql_password.secret_string
   }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
 }
 
 resource "kubernetes_secret" "private_issuer" {
@@ -135,6 +155,10 @@ resource "kubernetes_secret" "private_issuer" {
   data = {
     password = data.aws_secretsmanager_secret_version.private_issuer_password.secret_string
   }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
 }
 
 resource "kubernetes_secret" "scim" {
@@ -145,6 +169,10 @@ resource "kubernetes_secret" "scim" {
   data = {
     "credentials.json" = data.aws_secretsmanager_secret_version.scim_key.secret_string
   }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
 }
 
 resource "kubernetes_secret" "smtp" {
@@ -155,4 +183,8 @@ resource "kubernetes_secret" "smtp" {
   data = {
     password = data.aws_secretsmanager_secret_version.smtp_password.secret_string
   }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
 }
