@@ -14,6 +14,20 @@ After completion, several new files will exist (eg. `postgresql_password.enc`). 
 gcloud auth application-default login
 ```
 
+#### Example module intantiation
+
+```terraform
+module "run_anywhere" {
+  source = "github.com/smallstep/run-anywhere-terraform.git//gcp"
+
+  project_id              = "smallstep"
+  base_domain             = "something.com"
+  region                  = "us-central1"
+  zone                    = "us-central1-c"
+  path_to_secrets         = "${path.module}/secrets"
+}
+```
+
 #### Initialize and apply
 
 ```shell

@@ -4,30 +4,8 @@
 # 
 #--------------------------------------------------------------------------------------
 
-variable "project_id" {
-  default     = "smallstep"
-  description = "The project ID (not name) where Terraform will apply (pre-existing)."
-  type        = string
-}
-
-variable "region" {
-  description = "GCP region for the project."
-  type        = string
-}
-
-variable "zone" {
-  description = "GCP zone for the project."
-  type        = string
-}
-
 variable "base_domain" {
   description = "The base domain for all smallstep subdomains."
-  type        = string
-}
-
-variable "namespace" {
-  default     = "smallstep"
-  description = "Kubernetes namespace where run anywhere will be installed."
   type        = string
 }
 
@@ -85,6 +63,12 @@ variable "k8s_channel" {
   type        = string
 }
 
+variable "namespace" {
+  default     = "smallstep"
+  description = "Kubernetes namespace where run anywhere will be installed."
+  type        = string
+}
+
 variable "node_count" {
   default     = 2
   description = "Desired number of nodes to run in the K8s node pool."
@@ -126,6 +110,11 @@ variable "path_to_secrets" {
   type        = string
 }
 
+variable "project_id" {
+  description = "The project ID (not name) where Terraform will apply (pre-existing)."
+  type        = string
+}
+
 variable "redis_version" {
   default     = "REDIS_4_0"
   description = "Version of Redis used for the `run anywhere` deployment."
@@ -144,8 +133,18 @@ variable "redis_memory_size_gb" {
   type        = number
 }
 
+variable "region" {
+  description = "GCP region for the project."
+  type        = string
+}
+
 variable "sql_database_version" {
   default     = "POSTGRES_11"
   description = "Version of PostgreSQL to run for the DB cluster."
+  type        = string
+}
+
+variable "zone" {
+  description = "GCP zone for the project."
   type        = string
 }
