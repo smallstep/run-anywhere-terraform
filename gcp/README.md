@@ -1,48 +1,14 @@
 ### GCP
 
-#### Create a project
-
-Substitute your own project name.
-
-```shell
-gcloud projects create smallstep-dev
-```
-
-#### Create a bucket for terraform state
-
-Substitute your own project, location, and bucket name (globally unique).
-
-```shell
-gsutil mb -p smallstep-dev -l US-WEST1 gs://acmecorp-smallstep-dev-terraform
-```
-
-### Terraform
-
 #### Generate secrets
 
-Terraform will need some secrets for various pieces of your infrastructure. Some of these secrets must be manually entered and others will be auto-generated. All secrets are stored on disk in the repository, encrypted by GCP Cloud KMS, and are safe to commit. Terraform will also automatically apply these secrets to your kubernetes cluster where needed.
+Terraform will need some secrets for various pieces of your infrastructure. Some of these secrets must be manually entered and others will be auto-generated. All secrets are stored on disk in the location of your choice, encrypted by GCP Cloud KMS, and are safe to commit. Terraform will also automatically apply these secrets to your kubernetes cluster where needed. When instantiating this module, you must pass the relative path to these secrets to variable `path_to_secrets`, so it is recommended to store them in a directory within your Terraform workspace.
 
-```shell
-./scripts/create-secrets.sh
-```
+To run the following script, you must have the [`step`](https://github.com/smallstep/cli) and [`gcloud`](https://cloud.google.com/sdk/docs/install) CLI utilities installed and configured.
 
-After completion, several new files will exist in [`secrets/`](secrets/) (eg. `postgresql_password.enc`). They are safe to commit to be re-applied by terraform.
+<script src="https://gist.github.com/J-Hunter-Hawke/cb4314104a0ac250d31ec09e5f2c377d.js"></script>
 
-#### Configure GCS backend bucket in `backend.tf` for terraform state
-
-Substitute your own GCP bucket name as created above.
-
-```terraform
-terraform {
-  backend "gcs" {
-    bucket = "acmecorp-smallstep-dev-terraform"
-  }
-}
-```
-
-#### Configure terraform
-
-Open and edit [`config.tf`](config.tf) to match your GCP project settings.
+After completion, several new files will exist (eg. `postgresql_password.enc`). They are safe to commit to be re-applied by terraform.
 
 #### Set up your default credentials
 

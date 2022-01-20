@@ -1,13 +1,13 @@
 terraform {
   required_providers {
-    aws = {
+    google = {
       source  = "hashicorp/google"
-      version = ">= 4.5.0"
+      version = "~> 3.58.0"
     }
 
-    kubernetes = {
+    google-beta = {
       source  = "hashicorp/google-beta"
-      version = ">= 4.5.0"
+      version = "~> 3.58.0"
     }
 
     null = {
@@ -15,7 +15,7 @@ terraform {
       version = ">= 3.1"
     }
 
-    random = {
+    kubernetes = {
       source  = "hashicorp/kubernetes"
       version = ">= 2.6"
     }
