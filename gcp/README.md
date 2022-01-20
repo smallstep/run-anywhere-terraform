@@ -18,13 +18,13 @@ gcloud auth application-default login
 
 ```terraform
 module "run_anywhere" {
-  source = "github.com/smallstep/run-anywhere-terraform.git//gcp"
+  source = "github.com/smallstep/run-anywhere-terraform.git//gcp?ref=v1.0.0"
 
-  project_id              = "smallstep"
   base_domain             = "something.com"
+  path_to_secrets         = "${path.module}/secrets"
+  project_id              = "smallstep"
   region                  = "us-central1"
   zone                    = "us-central1-c"
-  path_to_secrets         = "${path.module}/secrets"
 }
 ```
 

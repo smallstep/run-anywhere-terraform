@@ -63,6 +63,12 @@ variable "k8s_channel" {
   type        = string
 }
 
+variable "k8s_cluster_name" {
+  default     = "run-anywhere"
+  description = "Name for the GKE cluster created by the module."
+  type        = string
+}
+
 variable "namespace" {
   default     = "smallstep"
   description = "Kubernetes namespace where run anywhere will be installed."

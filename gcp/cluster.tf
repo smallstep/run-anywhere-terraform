@@ -8,7 +8,7 @@ resource "google_container_cluster" "primary" {
   provider = google-beta
   project  = var.project_id
 
-  name     = "primary"
+  name     = var.k8s_cluster_name
   location = var.region
 
   release_channel {
