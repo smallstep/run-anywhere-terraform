@@ -1,4 +1,8 @@
-### GCP
+## GCP
+
+#### Requirements
+[`step`](https://github.com/smallstep/cli)
+[`gcloud`](https://cloud.google.com/sdk/docs/install)
 
 #### Generate secrets
 
@@ -8,10 +12,14 @@ To run the [script that generates and encrypts project secrets](https://gist.git
 
 After completion, several new files will exist (eg. `postgresql_password.enc`). They are safe to commit to be re-applied by terraform.
 
-#### Set up your default credentials
+#### Set up your credentials
 
 ```shell
 gcloud auth application-default login
+
+curl https://gist.githubusercontent.com/J-Hunter-Hawke/cb4314104a0ac250d31ec09e5f2c377d/raw > create_gcp_secrets.sh
+chmod +x ./create_gcp_secrets && ./create_gcp_secrets.sh
+mv ./secrets /path/to/terraform/secrets
 ```
 
 #### Example module intantiation
