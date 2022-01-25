@@ -2,6 +2,7 @@
 
 #### Requirements
 [`step`](https://github.com/smallstep/cli)
+
 [`aws`](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
 #### Secret management

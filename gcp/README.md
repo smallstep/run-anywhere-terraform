@@ -2,6 +2,7 @@
 
 #### Requirements
 [`step`](https://github.com/smallstep/cli)
+
 [`gcloud`](https://cloud.google.com/sdk/docs/install)
 
 #### Generate secrets
