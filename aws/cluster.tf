@@ -23,7 +23,7 @@ locals {
 module "eks_base_security_group_rules" {
   source            = "./base_security_group_rules"
   public_facing     = var.security_groups_public
-  security_group_id = aws_security_group.eks.id
+  security_group_id = aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id
 }
 
 resource "aws_eks_cluster" "eks" {
@@ -33,7 +33,6 @@ resource "aws_eks_cluster" "eks" {
   vpc_config {
     endpoint_public_access  = true
     endpoint_private_access = false
-    security_group_ids      = [aws_security_group.eks.id]
     subnet_ids              = var.subnets_private
   }
 
@@ -192,22 +191,6 @@ resource "aws_iam_role_policy_attachment" "eks_node_group_3" {
   role       = aws_iam_role.eks_node_group.name
 }
 
-# Security Group for the cluster and its nodes
-resource "aws_security_group" "eks" {
-  name        = "${var.default_name}-eks"
-  vpc_id      = data.aws_subnet.public[0].vpc_id
-  description = var.default_description
-
-  tags = {
-    Name        = "${var.default_name}-eks"
-    Description = var.default_description
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
 # Allow connections from the load balancer in the public subnets
 resource "aws_security_group_rule" "incoming_connections" {
   type              = "ingress"
@@ -215,7 +198,7 @@ resource "aws_security_group_rule" "incoming_connections" {
   to_port           = 65535
   protocol          = "tcp"
   cidr_blocks       = local.public_cidrs
-  security_group_id = aws_security_group.eks.id
+  security_group_id = aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id
   description       = "Allow connections from the NLB stood up in the public subnets"
 }
 
@@ -226,7 +209,7 @@ resource "aws_security_group_rule" "rds_to_eks" {
   to_port                  = 65535
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.rds.id
-  security_group_id        = aws_security_group.eks.id
+  security_group_id        = aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id
   description              = "Allow ingress from the PostgreSQL DBs running in the smallstep project"
 
   lifecycle {
@@ -241,7 +224,7 @@ resource "aws_security_group_rule" "redis_to_eks" {
   to_port                  = 65535
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.redis.id
-  security_group_id        = aws_security_group.eks.id
+  security_group_id        = aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id
   description              = "Allow ingress from the Redis instance running in the smallstep projet"
 
   lifecycle {
