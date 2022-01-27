@@ -90,15 +90,12 @@ resource "aws_security_group" "redis" {
   }
 }
 
-# TODO: TEST OUT JUST USING THIS SECURITY GROUP EVERYWHERE FOR THE SAKE OF SIMPLICITY
-# 
 # Allow ingress from the EKS cluster only on the given port
 resource "aws_security_group_rule" "eks_to_redis" {
   type                     = "ingress"
   from_port                = var.redis_port
   to_port                  = var.redis_port
   protocol                 = "tcp"
-  # source_security_group_id = aws_security_group.eks.id
   source_security_group_id = aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id
   security_group_id        = aws_security_group.redis.id
   description              = "Allow ingress from the EKS cluster running in the smallstep project"

@@ -7,7 +7,7 @@
 // decrypt postgresql password
 data "google_kms_secret" "postgresql_password" {
   crypto_key = data.google_kms_crypto_key.terraform_secret.self_link
-  ciphertext = filebase64("secrets/postgresql_password.enc")
+  ciphertext = filebase64("${var.path_to_secrets}/postgresql_password.enc")
 }
 
 locals {

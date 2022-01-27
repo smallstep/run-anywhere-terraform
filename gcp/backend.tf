@@ -1,13 +1,13 @@
 terraform {
   required_providers {
-    aws = {
+    google = {
       source  = "hashicorp/google"
-      version = ">= 4.5.0"
+      version = "~> 3.58.0"
     }
 
-    kubernetes = {
+    google-beta = {
       source  = "hashicorp/google-beta"
-      version = ">= 4.5.0"
+      version = "~> 3.58.0"
     }
 
     null = {
@@ -15,7 +15,7 @@ terraform {
       version = ">= 3.1"
     }
 
-    random = {
+    kubernetes = {
       source  = "hashicorp/kubernetes"
       version = ">= 2.6"
     }
@@ -33,11 +33,7 @@ provider "google-beta" {
 }
 
 provider "kubernetes" {
-  host                   = google_container_cluster.primary.endpoint
-  username               = google_container_cluster.primary.master_auth[0].username
-  password               = google_container_cluster.primary.master_auth[0].password
-  client_certificate     = base64decode(google_container_cluster.primary.master_auth[0].client_certificate)
-  client_key             = base64decode(google_container_cluster.primary.master_auth[0].client_key)
-  cluster_ca_certificate = base64decode(google_container_cluster.primary.master_auth[0].cluster_ca_certificate)
-  config_path            = var.kube_config_path
+  cluster_ca_certificate = base64decode(google_container_cluster.primary.master_auth.0.cluster_ca_certificate)
+  host                   = "https://${google_container_cluster.primary.endpoint}"
+  token                  = data.google_client_config.current.access_token
 }

@@ -271,7 +271,7 @@ resource "aws_security_group_rule" "eks_to_rds" {
   from_port                = var.rds_port
   to_port                  = var.rds_port
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.eks.id
+  source_security_group_id = aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id
   security_group_id        = aws_security_group.rds.id
   description              = "Allow ingress from the EKS cluster running in the smallstep project"
 
@@ -288,7 +288,7 @@ resource "aws_security_group_rule" "rds_to_rds" {
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.rds.id
   security_group_id        = aws_security_group.rds.id
-  description              = "Allow ingress from the EKS cluster running in the smallstep project"
+  description              = "Allow for database clustering"
 
   lifecycle {
     create_before_destroy = true

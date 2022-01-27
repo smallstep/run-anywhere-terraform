@@ -1,53 +1,40 @@
-### GCP
+## GCP
 
-#### Create a project
+#### Requirements
+[`step`](https://github.com/smallstep/cli)
 
-Substitute your own project name.
-
-```shell
-gcloud projects create smallstep-dev
-```
-
-#### Create a bucket for terraform state
-
-Substitute your own project, location, and bucket name (globally unique).
-
-```shell
-gsutil mb -p smallstep-dev -l US-WEST1 gs://acmecorp-smallstep-dev-terraform
-```
-
-### Terraform
+[`gcloud`](https://cloud.google.com/sdk/docs/install)
 
 #### Generate secrets
 
-Terraform will need some secrets for various pieces of your infrastructure. Some of these secrets must be manually entered and others will be auto-generated. All secrets are stored on disk in the repository, encrypted by GCP Cloud KMS, and are safe to commit. Terraform will also automatically apply these secrets to your kubernetes cluster where needed.
+Terraform will need some secrets for various pieces of your infrastructure. Some of these secrets must be manually entered and others will be auto-generated. All secrets are stored on disk in the location of your choice, encrypted by GCP Cloud KMS, and are safe to commit. Terraform will also automatically apply these secrets to your kubernetes cluster where needed. When instantiating this module, you must pass the relative path to these secrets to variable `path_to_secrets`, so it is recommended to store them in a directory within your Terraform workspace.
 
-```shell
-./scripts/create-secrets.sh
-```
+To run the [script that generates and encrypts project secrets](https://github.com/smallstep/run-anywhere-terraform/blob/gcp-testing-phase/create_gcp_secrets.sh), you must have the [`step`](https://github.com/smallstep/cli) and [`gcloud`](https://cloud.google.com/sdk/docs/install) CLI utilities installed and configured.
 
-After completion, several new files will exist in [`secrets/`](secrets/) (eg. `postgresql_password.enc`). They are safe to commit to be re-applied by terraform.
+After completion, several new files will exist (eg. `postgresql_password.enc`). They are safe to commit to be re-applied by terraform.
 
-#### Configure GCS backend bucket in `backend.tf` for terraform state
-
-Substitute your own GCP bucket name as created above.
-
-```terraform
-terraform {
-  backend "gcs" {
-    bucket = "acmecorp-smallstep-dev-terraform"
-  }
-}
-```
-
-#### Configure terraform
-
-Open and edit [`config.tf`](config.tf) to match your GCP project settings.
-
-#### Set up your default credentials
+#### Set up your credentials
 
 ```shell
 gcloud auth application-default login
+
+curl https://raw.githubusercontent.com/smallstep/run-anywhere-terraform/create_gcp_secrets.sh > create_gcp_secrets.sh
+chmod +x ./create_gcp_secrets && ./create_gcp_secrets.sh
+mv ./secrets /path/to/terraform/secrets
+```
+
+#### Example module intantiation
+
+```terraform
+module "run_anywhere" {
+  source = "github.com/smallstep/run-anywhere-terraform.git//gcp?ref=v1.0.0"
+
+  base_domain             = "something.com"
+  path_to_secrets         = "${path.module}/secrets"
+  project_id              = "smallstep"
+  region                  = "us-central1"
+  zone                    = "us-central1-c"
+}
 ```
 
 #### Initialize and apply

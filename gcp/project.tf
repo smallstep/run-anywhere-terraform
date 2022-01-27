@@ -4,6 +4,8 @@
 # 
 #--------------------------------------------------------------------------------------
 
+data "google_client_config" "current" {}
+
 data "google_compute_default_service_account" "default" {
   project    = var.project_id
   depends_on = [google_project_service.compute]
@@ -97,20 +99,4 @@ resource "google_project_service" "admin" {
 resource "google_project_service" "cloudsqladmin" {
   project = var.project_id
   service = "sqladmin.googleapis.com"
-}
-
-# Creates the KMS key and generates client secrets for the key to encrypt
-resource "null_resource" "generate_oidc_jwk" {
-  provisioner "local-exec" {
-    command     = "./scripts/create-secrets.sh"
-
-    environment = {
-      key_name                = var.key_name
-      keyring_name            = var.keyring_name
-      gcp_project_id          = var.project_id
-      smtp_password           = var.smtp_password
-      private_issuer_password = var.private_issuer_password
-      yubihsm_pin             = var.yubihsm_pin
-    }
-  } 
 }

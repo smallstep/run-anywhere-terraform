@@ -3,42 +3,9 @@
 # This file hosts all variable resources for the GCP Run Anywhere deployment.
 # 
 #--------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------
-#                                !!! IMPORTANT !!!  
-# -------------------------------------------------------------------------------------
-# When running first apply set: terraform apply -var smtp_password="<value>" \
-#                                               -var private_issuer_password="<value>" 
-#                                               
-#                                               (if you set `yubihsm_enabled = true`) \
-#                                               -var yubihsm_pin="<value"
-# -------------------------------------------------------------------------------------
-# Subsequent applies will not require you to set these variables, as changes
-# will be ignored.
-# -------------------------------------------------------------------------------------
-variable "project_id" {
-  default     = "smallstep"
-  description = "The project ID (not name) where Terraform will apply (pre-existing)."
-  type        = string
-}
-
-variable "region" {
-  description = "GCP region for the project."
-  type        = string
-}
-
-variable "zone" {
-  description = "GCP zone for the project."
-  type        = string
-}
 
 variable "base_domain" {
   description = "The base domain for all smallstep subdomains."
-  type        = string
-}
-
-variable "namespace" {
-  default     = "smallstep"
-  description = "Kubernetes namespace where run anywhere will be installed."
   type        = string
 }
 
@@ -96,6 +63,18 @@ variable "k8s_channel" {
   type        = string
 }
 
+variable "k8s_cluster_name" {
+  default     = "run-anywhere"
+  description = "Name for the GKE cluster created by the module."
+  type        = string
+}
+
+variable "namespace" {
+  default     = "smallstep"
+  description = "Kubernetes namespace where run anywhere will be installed."
+  type        = string
+}
+
 variable "node_count" {
   default     = 2
   description = "Desired number of nodes to run in the K8s node pool."
@@ -132,6 +111,16 @@ variable "node_max_unavailable" {
   type        = string
 }
 
+variable "path_to_secrets" {
+  description = "Relative path to the generated, encrypted secrets for this module."
+  type        = string
+}
+
+variable "project_id" {
+  description = "The project ID (not name) where Terraform will apply (pre-existing)."
+  type        = string
+}
+
 variable "redis_version" {
   default     = "REDIS_4_0"
   description = "Version of Redis used for the `run anywhere` deployment."
@@ -150,38 +139,18 @@ variable "redis_memory_size_gb" {
   type        = number
 }
 
+variable "region" {
+  description = "GCP region for the project."
+  type        = string
+}
+
 variable "sql_database_version" {
   default     = "POSTGRES_11"
   description = "Version of PostgreSQL to run for the DB cluster."
   type        = string
 }
 
-# ------------------------------------------------------------------------------------------
-# Secret variables to be encrypted locally and uploaded to the project
-# ------------------------------------------------------------------------------------------
-
-variable "smtp_password" {
-  default     = ""
-  description = "The SMTP password to be used by the K8s cluster."
+variable "zone" {
+  description = "GCP zone for the project."
   type        = string
-  sensitive   = true
-}
-
-variable "private_issuer_password" {
-  default     = ""
-  description = "Private issuer password to be used by the K8s cluster."
-  type        = string
-  sensitive   = true
-}
-
-variable "yubihsm_pin" {
-  description = "The PIN used for your HSMs, only used when setting up with HSM support."
-  default     = ""
-  type        = string
-  sensitive   = true
-
-  validation {
-    condition     = can(regex("^0x[0-9A-Fa-f]{4}.*$", var.yubihsm_pin))
-    error_message = "Must provide a 4 digit pin in hexadecimal proceeded with the password."
-  }
 }
