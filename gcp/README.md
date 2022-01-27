@@ -18,7 +18,7 @@ After completion, several new files will exist (eg. `postgresql_password.enc`). 
 ```shell
 gcloud auth application-default login
 
-curl https://raw.githubusercontent.com/smallstep/run-anywhere-terraform/create_gcp_secrets.sh > create_gcp_secrets.sh
+curl https://raw.githubusercontent.com/smallstep/run-anywhere-terraform/main/create_gcp_secrets.sh > create_gcp_secrets.sh
 chmod +x ./create_gcp_secrets && ./create_gcp_secrets.sh
 mv ./secrets /path/to/terraform/secrets
 ```
