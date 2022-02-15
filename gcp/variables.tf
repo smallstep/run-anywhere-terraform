@@ -40,7 +40,7 @@ variable "cloudsql_log_min_duration_statement" {
 }
 
 variable "key_name" {
-  default     = "smallstep-terraform"
+  default     = "terraform-secret"
   description = "Desired name for the key that will encrypt project secrets."
   type        = string
 }
