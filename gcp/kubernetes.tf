@@ -5,32 +5,32 @@
 #--------------------------------------------------------------------------------------
 
 data "google_kms_secret" "auth_secret" {
-  crypto_key = data.google_kms_crypto_key.terraform_secret.self_link
+  crypto_key = data.google_kms_crypto_key.terraform_secret.id
   ciphertext = filebase64("${var.path_to_secrets}/auth_secret.enc")
 }
 
 data "google_kms_secret" "majordomo_provisioner_password" {
-  crypto_key = data.google_kms_crypto_key.terraform_secret.self_link
+  crypto_key = data.google_kms_crypto_key.terraform_secret.id
   ciphertext = filebase64("${var.path_to_secrets}/majordomo-provisioner-password_password.enc")
 }
 
 data "google_kms_secret" "oidc_jwks" {
-  crypto_key = data.google_kms_crypto_key.terraform_secret.self_link
+  crypto_key = data.google_kms_crypto_key.terraform_secret.id
   ciphertext = filebase64("${var.path_to_secrets}/oidc_jwks.enc")
 }
 
 data "google_kms_secret" "smtp_password" {
-  crypto_key = data.google_kms_crypto_key.terraform_secret.self_link
+  crypto_key = data.google_kms_crypto_key.terraform_secret.id
   ciphertext = filebase64("${var.path_to_secrets}/smtp_password.enc")
 }
 
 data "google_kms_secret" "private_issuer_password" {
-  crypto_key = data.google_kms_crypto_key.terraform_secret.self_link
+  crypto_key = data.google_kms_crypto_key.terraform_secret.id
   ciphertext = filebase64("${var.path_to_secrets}/private-issuer_password.enc")
 }
 
 data "google_kms_secret" "yubihsm2_pin" {
-  crypto_key = data.google_kms_crypto_key.terraform_secret.self_link
+  crypto_key = data.google_kms_crypto_key.terraform_secret.id
   ciphertext = filebase64("${var.path_to_secrets}/yubihsm2_pin.enc")
 }
 
