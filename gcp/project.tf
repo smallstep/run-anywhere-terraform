@@ -16,13 +16,13 @@ data "google_compute_default_service_account" "default" {
 data "google_kms_key_ring" "keys" {
   project  = var.project_id
   location = "global"
-  name     = "smallstep-terraform"
+  name     = var.keyring_name
 }
 
 // This is the secret used to decrypt encrypted secrets in this repo
 data "google_kms_crypto_key" "terraform_secret" {
   key_ring = data.google_kms_key_ring.keys.self_link
-  name     = "terraform-secret"
+  name     = var.key_name
 }
 
 resource "google_project_service" "compute" {
