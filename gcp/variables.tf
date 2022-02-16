@@ -39,6 +39,12 @@ variable "cloudsql_log_min_duration_statement" {
   type        = number
 }
 
+variable "db_name" {
+  default     = "smallstep"
+  description = "Name assigned to the PostgreSQL database sitting behind the cluster."
+  type        = string
+}
+
 variable "key_name" {
   default     = "terraform-secret"
   description = "Desired name for the key that will encrypt project secrets."

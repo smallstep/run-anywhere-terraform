@@ -26,7 +26,7 @@ locals {
 }
 
 resource "google_sql_database_instance" "master" {
-  name             = "smallstep"
+  name             = var.db_name
   project          = var.project_id
   database_version = var.sql_database_version
   region           = var.region
@@ -53,8 +53,8 @@ resource "google_sql_database_instance" "master" {
     }
     availability_type = var.cloudsql_high_availability ? "REGIONAL" : "ZONAL"
     user_labels = {
-      "cluster_name"  = "smallstep"
-      "instance_name" = "smallstep-primary"
+      "cluster_name"  = var.db_name
+      "instance_name" = "${var.db_name}-primary"
     }
     database_flags {
       name  = "log_min_duration_statement"
