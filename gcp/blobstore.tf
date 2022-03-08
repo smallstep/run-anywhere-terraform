@@ -1,5 +1,5 @@
 # A public bucket to store CRLs
-resource "google_storage_bucket" "veto_crlS" {
+resource "google_storage_bucket" "veto_crls" {
   project = var.project_id
   name    = "crl.${google_dns_managed_zone.default.dns_name}"
 }
