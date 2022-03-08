@@ -89,6 +89,14 @@ resource "aws_route53_record" "web_auth" {
   records = concat(aws_eip.cluster[*].public_ip)
 }
 
+resource "aws_route53_record" "ocsp" {
+  zone_id = aws_route53_zone.cluster.id
+  name    = "ocsp.${aws_route53_zone.cluster.name}"
+  ttl     = 300
+  type    = "A"
+  records = concat(aws_eip.cluster[*].public_ip)
+}
+
 resource "aws_route53_record" "crl" {
   zone_id = aws_route53_zone.cluster.id
   name    = "crl.${aws_route53_zone.cluster.name}"
