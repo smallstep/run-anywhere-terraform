@@ -88,3 +88,11 @@ resource "aws_route53_record" "web_auth" {
   type    = "A"
   records = concat(aws_eip.cluster[*].public_ip)
 }
+
+resource "aws_route53_record" "crl" {
+  zone_id = aws_route53_zone.cluster.id
+  name    = "crl.${aws_route53_zone.cluster.name}"
+  ttl     = 300
+  type    = "CNAME"
+  records = ["crl.${aws_route53_zone.cluster.name}.s3.${var.region}.amazonaws.com."]
+}
