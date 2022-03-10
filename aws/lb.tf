@@ -9,14 +9,14 @@ resource "aws_iam_policy" "load_balancer_policy" {
   path        = "/"
   description = "AWS LoadBalancer Controller IAM Policy"
 
-  policy = file("resources/lb/iam-policy.json")
+  policy = file("${path.module}/resources/lb/iam-policy.json")
 }
 
 resource "aws_iam_role_policy" "load_balancer_role_policy" {
   name = "${var.default_name}-lb-all-nodes"
   role = aws_iam_role.eks_node_group.id
 
-  policy = file("resources/lb/iam-policy.json")
+  policy = file("${path.module}/resources/lb/iam-policy.json")
 }
 
 resource "null_resource" "post_policy" {
