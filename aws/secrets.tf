@@ -196,7 +196,7 @@ resource "aws_secretsmanager_secret_version" "smtp_password" {
 # Once the KMS key has been created, we generate client secrets for the key to encrypt
 resource "null_resource" "generate_oidc_jwk" {
   provisioner "local-exec" {
-    command     = "./scripts/create_oidc_secret.sh"
+    command     = "${path.module}/scripts/create_oidc_secret.sh"
 
     environment = {
       secret_id = aws_secretsmanager_secret.oidc_jwks.id
@@ -208,7 +208,7 @@ resource "null_resource" "generate_oidc_jwk" {
 # If using SCIM for provisioning, replace this value in SecretsManager and re-apply
 resource "null_resource" "generate_temp_scim_key" {
   provisioner "local-exec" {
-    command     = "./scripts/create_temp_scim_key.sh"
+    command     = "${path.module}/scripts/create_temp_scim_key.sh"
 
     environment = {
       secret_id = aws_secretsmanager_secret.scim_key.id
