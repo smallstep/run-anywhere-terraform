@@ -33,7 +33,7 @@ resource "null_resource" "post_policy" {
         acc=$(echo ${aws_eks_cluster.eks.arn} | cut -f5 -d':')
         cn=$(echo ${aws_eks_cluster.eks.name})
         echo "$reg $cn $acc"
-        ./resources/lb/post-policy.sh $reg $cn $acc
+        ${path.module}/resources/lb/post-policy.sh $reg $cn $acc
         echo "done"
      EOT
   }
