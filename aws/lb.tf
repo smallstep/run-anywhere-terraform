@@ -33,6 +33,7 @@ resource "null_resource" "post_policy" {
         acc=$(echo ${aws_eks_cluster.eks.arn} | cut -f5 -d':')
         cn=$(echo ${aws_eks_cluster.eks.name})
         echo "$reg $cn $acc"
+        kubectl apply -f ${path.module}/resources/lb/crds.yaml
         ${path.module}/resources/lb/post-policy.sh $reg $cn $acc
         echo "done"
      EOT
