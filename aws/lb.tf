@@ -5,7 +5,7 @@
 #----------------------------------------------------------------------------------
 
 resource "aws_iam_policy" "load_balancer_policy" {
-  name        = "AWSLoadBalancerControllerIAMPolicy"
+  name_prefix = "AWSLoadBalancerControllerIAMPolicy"
   path        = "/"
   description = "AWS LoadBalancer Controller IAM Policy"
 
