@@ -15,7 +15,7 @@ data "archive_file" "make_dbs" {
 locals {
   # list of all database names needed
   # will not need to change
-  db_names         = ["landlord", "certificates", "web", "depot", "folk", "memoir", "majordomo", "moody", "courier", "veto"]
+  db_names         = ["landlord", "certificates", "web", "depot", "folk", "memoir", "majordomo", "moody", "courier", "veto", "approvalq"]
 
   cw_logging_value = var.rds_enable_cloudwatch_logging == true ? ["postgresql"] : [""]
 

@@ -23,6 +23,7 @@ locals {
     google_sql_database.majordomo.name,
     google_sql_database.moody.name,
     google_sql_database.veto.name,
+    google_sql_database.approvalq.name,
   ])
 }
 
@@ -126,6 +127,12 @@ resource "google_sql_database" "courier" {
 resource "google_sql_database" "veto" {
   project  = var.project_id
   name     = "veto"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "approvalq" {
+  project  = var.project_id
+  name     = "approvalq"
   instance = google_sql_database_instance.master.name
 }
 

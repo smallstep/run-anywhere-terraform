@@ -191,7 +191,6 @@ resource "google_service_account_iam_binding" "veto_workload_identity" {
   members = [
     "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/veto-acc]",
   ]
-  depends_on = [google_container_cluster.primary]
 }
 
 resource "google_storage_bucket_iam_binding" "veto" {
@@ -204,4 +203,32 @@ resource "google_storage_bucket_iam_binding" "veto" {
 
 resource "google_service_account_key" "veto" {
   service_account_id = google_service_account.veto.name
+}
+
+// Approvalq workload identity and roles
+resource "google_service_account" "approvalq" {
+  project      = var.project_id
+  account_id   = "approvalq"
+  display_name = "approvalq"
+  depends_on   = [google_project_service.gke]
+}
+
+resource "google_service_account_iam_binding" "approvalq_workload_identity" {
+  service_account_id = google_service_account.approvalqveto.name
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/approvalq]",
+  ]
+  depends_on = [google_container_cluster.primary]
+}
+
+
+resource "google_project_iam_member" "approvalq_cloudsql_client" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.approvalq.email}"
+}
+
+resource "google_service_account_key" "approvalq" {
+  service_account_id = google_service_account.approvalq.name
 }
