@@ -83,3 +83,21 @@ resource "google_dns_record_set" "tunnel" {
   managed_zone = google_dns_managed_zone.default.name
   rrdatas      = [google_compute_address.smallstep_address.address]
 }
+
+resource "google_dns_record_set" "ocsp" {
+  project      = var.project_id
+  name         = "ocsp.${google_dns_managed_zone.default.dns_name}"
+  ttl          = 300
+  type         = "A"
+  managed_zone = google_dns_managed_zone.default.name
+  rrdatas = [google_compute_address.smallstep_address.address]
+}
+
+resource "google_dns_record_set" "crl" {
+  project      = var.project_id
+  name         = "crl.${google_dns_managed_zone.default.dns_name}"
+  ttl          = 300
+  type         = "CNAME"
+  managed_zone = google_dns_managed_zone.default.name
+  rrdatas = ["c.storage.googleapis.com."]
+}

@@ -160,6 +160,11 @@ resource "aws_iam_role_policy" "eks_service_account" {
         Effect   = "Allow"
         Resource = "*"
       },
+      {
+        Action   = ["s3:PutObject"]
+        Effect   = "Allow"
+        Resource = aws_s3_bucket.veto_crls.arn
+      },
     ]
   })
 }

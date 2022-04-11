@@ -175,3 +175,33 @@ resource "google_project_iam_member" "magpie_storage_admin" {
 resource "google_service_account_key" "magpie" {
   service_account_id = google_service_account.magpie.name
 }
+
+// Veto workload identity and roles
+
+resource "google_service_account" "veto" {
+  project      = var.project_id
+  account_id   = "veto-acc"
+  display_name = "veto-acc"
+  depends_on   = [google_project_service.gke]
+}
+
+resource "google_service_account_iam_binding" "veto_workload_identity" {
+  service_account_id = google_service_account.veto.name
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/veto-acc]",
+  ]
+  depends_on = [google_container_cluster.primary]
+}
+
+resource "google_storage_bucket_iam_binding" "veto" {
+  bucket = google_storage_bucket.veto_crls.name
+  role = "roles/storage.objectAdmin"
+  members = [
+    "serviceAccount:${google_service_account.veto.email}",
+  ]
+}
+
+resource "google_service_account_key" "veto" {
+  service_account_id = google_service_account.veto.name
+}
