@@ -191,6 +191,7 @@ resource "google_service_account_iam_binding" "veto_workload_identity" {
   members = [
     "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/veto-acc]",
   ]
+  depends_on = [google_container_cluster.primary]
 }
 
 resource "google_storage_bucket_iam_binding" "veto" {
