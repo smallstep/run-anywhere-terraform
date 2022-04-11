@@ -215,7 +215,7 @@ resource "google_service_account" "approvalq" {
 }
 
 resource "google_service_account_iam_binding" "approvalq_workload_identity" {
-  service_account_id = google_service_account.approvalqveto.name
+  service_account_id = google_service_account.approvalq.name
   role               = "roles/iam.workloadIdentityUser"
   members = [
     "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/approvalq]",
