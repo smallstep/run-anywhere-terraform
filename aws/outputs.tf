@@ -13,8 +13,12 @@ output "eks_kubeconfig_certificate_authority_data" {
   value = aws_eks_cluster.eks.certificate_authority[0].data
 }
 
+output "iam_service_account_arn" {
+  value = aws_iam_role.eks_service_account.arn
+}
+
 output "ingress_eip" {
-  value = concat(aws_eip.cluster[*].public_ip)
+  value = concat(aws_eip.cluster[*].id)
 }
 
 output "rds_cluster_endpoint" {

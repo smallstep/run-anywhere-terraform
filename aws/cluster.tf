@@ -9,6 +9,30 @@ data "aws_eks_cluster_auth" "eks" {
   name = aws_eks_cluster.eks.name
 }
 
+data "aws_iam_policy_document" "eks_service_account" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:smallstep:landlord"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    principals {
+      identifiers = [aws_iam_openid_connect_provider.eks.arn]
+      type        = "Federated"
+    }
+  }
+}
+
 data "tls_certificate" "eks" {
   url = aws_eks_cluster.eks.identity[0].oidc[0].issuer
 }
@@ -22,6 +46,8 @@ locals {
 # Defaults to only allowing these rules internal to the VPC
 module "eks_base_security_group_rules" {
   source            = "./base_security_group_rules"
+  # The SG is created with this rule already applied
+  egress_all        = false
   public_facing     = var.security_groups_public
   security_group_id = aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id
 }
@@ -122,30 +148,6 @@ resource "aws_iam_role" "eks_node_group" {
 resource "aws_iam_role" "eks_service_account" {
   name_prefix        = "${var.default_name}-service-account"
   assume_role_policy = data.aws_iam_policy_document.eks_service_account.json
-}
-
-data "aws_iam_policy_document" "eks_service_account" {
-  statement {
-    actions = ["sts:AssumeRoleWithWebIdentity"]
-    effect  = "Allow"
-
-    condition {
-      test     = "StringEquals"
-      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
-      values   = ["system:serviceaccount:smallstep:landlord"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud"
-      values   = ["sts.amazonaws.com"]
-    }
-
-    principals {
-      identifiers = [aws_iam_openid_connect_provider.eks.arn]
-      type        = "Federated"
-    }
-  }
 }
 
 resource "aws_iam_role_policy" "eks_service_account" {
