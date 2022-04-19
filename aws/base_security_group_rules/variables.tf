@@ -4,6 +4,11 @@
 # 
 #----------------------------------------------------------------------------------
 
+variable "egress_all" {
+  default     = true
+  description = "When true, adds a rule allowing all egress."
+}
+
 variable "public_facing" {
   default     = false
   description = "Sets a public facing resource in the rule set."

@@ -40,6 +40,12 @@ variable "default_name" {
   type        = string
 }
 
+variable "k8s_alb_controller_version" {
+  default     = "2.4.1"
+  description = "Version of the aws-load-balancer-controller to run in the cluster."
+  type        = string
+}
+
 # https://aws.amazon.com/ec2/instance-types/
 variable "k8s_instance_types" {
   default     = ["t3.large"]
