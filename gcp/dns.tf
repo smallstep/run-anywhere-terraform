@@ -101,3 +101,12 @@ resource "google_dns_record_set" "crl" {
   managed_zone = google_dns_managed_zone.default.name
   rrdatas = ["c.storage.googleapis.com."]
 }
+
+resource "google_dns_record_set" "approvalq" {
+  project      = var.project_id
+  name         = "approvalq.infra.${google_dns_managed_zone.default.dns_name}"
+  ttl          = 300
+  type         = "A"
+  managed_zone = google_dns_managed_zone.default.name
+  rrdatas = [google_compute_address.smallstep_address.address]
+}
