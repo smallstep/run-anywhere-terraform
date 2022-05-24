@@ -259,9 +259,22 @@ resource "null_resource" "kube_config" {
   ]
 }
 
+# EKS sets up a SG with a tag tying ownership back to the EKS cluster.
+# This tag bricks Target Groups and prevents them from registering targets.
+resource "null_resource" "remove_eks_sg_tag" {
+  provisioner "local-exec" {
+    command = "aws ec2 delete-tags --resources ${aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id} --tags Key=kubernetes.io/cluster/${aws_eks_cluster.eks.name},Value=owned"
+  }
+
+  depends_on = [
+    aws_eks_cluster.eks,
+    aws_eks_node_group.eks
+  ]
+}
+
 # EKS will only be able to bind properly to the selected subnets if each includes the following tag.
 # Using a null resource since they aren't managed by this terraform project.
-resource "null_resource" "tag_subnets" {
+resource "null_resource" "tag_private_subnets" {
   for_each = toset(var.subnets_private)
   provisioner "local-exec" {
     command = "aws ec2 create-tags --resources ${each.key} --tags Key=kubernetes.io/cluster/${aws_eks_cluster.eks.name},Value=shared"
