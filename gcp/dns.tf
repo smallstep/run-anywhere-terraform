@@ -110,3 +110,12 @@ resource "google_dns_record_set" "approvalq" {
   managed_zone = google_dns_managed_zone.default.name
   rrdatas = [google_compute_address.smallstep_address.address]
 }
+
+resource "google_dns_record_set" "scif" {
+  project      = var.project_id
+  name         = "scif.infra.${google_dns_managed_zone.default.dns_name}"
+  ttl          = 300
+  type         = "A"
+  managed_zone = google_dns_managed_zone.default.name
+  rrdatas = [google_compute_address.smallstep_address.address]
+}
