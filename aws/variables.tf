@@ -156,10 +156,10 @@ variable "redis_timeout" {
 
 # https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Reference.html
 variable "rds_desired_params" {
-  default = []
+  default     = []
   description = "List of map of desired RDS parameters for the Aurora cluster."
   type        = list(map(string))
- 
+
   /*
     For example:
 

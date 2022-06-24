@@ -50,7 +50,7 @@ resource "google_container_cluster" "primary" {
   remove_default_node_pool = true
   initial_node_count       = 1
 
-  depends_on  = [google_project_service.compute, google_project_service.gke]
+  depends_on = [google_project_service.compute, google_project_service.gke]
 }
 
 resource "google_container_node_pool" "primary" {

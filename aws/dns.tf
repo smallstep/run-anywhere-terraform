@@ -8,7 +8,7 @@
 # These addresses cannot change at any point so we instantiate an EIP
 resource "aws_eip" "cluster" {
   count = length(var.subnets_public)
-  tags  = {
+  tags = {
     Name        = var.default_name
     Description = var.default_description
   }

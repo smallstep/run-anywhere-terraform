@@ -45,7 +45,7 @@ locals {
 # If you want to test from the public internet, you can uncomment the `public_facing` line
 # Defaults to only allowing these rules internal to the VPC
 module "eks_base_security_group_rules" {
-  source            = "./base_security_group_rules"
+  source = "./base_security_group_rules"
   # The SG is created with this rule already applied
   egress_all        = false
   public_facing     = var.security_groups_public
