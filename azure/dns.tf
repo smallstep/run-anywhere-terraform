@@ -4,6 +4,7 @@ resource "azurerm_public_ip" "smallstep_address" {
   resource_group_name = azurerm_resource_group.smallstep.name
   location            = azurerm_resource_group.smallstep.location
   allocation_method   = "Static"
+  sku = "Standard"
 }
 
 resource "azurerm_dns_zone" "default" {
@@ -45,6 +46,14 @@ resource "azurerm_dns_a_record" "web_api_gateway" {
 
 resource "azurerm_dns_a_record" "web_app" {
   name                = "app"
+  zone_name           = azurerm_dns_zone.default.name
+  resource_group_name = azurerm_resource_group.smallstep.name
+  ttl                 = 300
+  records             = [azurerm_public_ip.smallstep_address.ip_address]
+}
+
+resource "azurerm_dns_a_record" "web_scif" {
+  name                = "scif.infra"
   zone_name           = azurerm_dns_zone.default.name
   resource_group_name = azurerm_resource_group.smallstep.name
   ttl                 = 300
