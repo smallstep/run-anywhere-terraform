@@ -184,12 +184,14 @@ resource "kubernetes_secret" "majordomo_provisioner_password" {
   }
 }
 
+# TODO
 resource "kubernetes_secret" "scim-server-credentials" {
   metadata {
     name      = "scim-server-secrets"
     namespace = var.namespace
   }
+
   data = {
-    "credentials.json" = "TODO"
+    "credentials.json" = ""
   }
 }

@@ -28,14 +28,6 @@ resource "azurerm_private_endpoint" "redis" {
   }
 }
 
-output "redis_private_ip" {
-  value = azurerm_private_endpoint.redis.private_service_connection[0].private_ip_address
-}
-
-output "redis_url" {
-  value = azurerm_redis_cache.smallstep.primary_connection_string
-}
-
 # TODO use private DNS since the IP of the private endpoint can change
 resource "kubernetes_config_map_v1" "coredns_custom" {
 	metadata {
