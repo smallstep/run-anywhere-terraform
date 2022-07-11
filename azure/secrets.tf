@@ -6,8 +6,8 @@ resource "random_id" "key_vault" {
 
 resource "azurerm_key_vault" "secrets" {
   name                        = random_id.key_vault.id
-  resource_group_name = azurerm_resource_group.smallstep.name
-  location            = azurerm_resource_group.smallstep.location
+  resource_group_name         = azurerm_resource_group.smallstep.name
+  location                    = azurerm_resource_group.smallstep.location
   enabled_for_disk_encryption = true
   tenant_id                   = data.azurerm_client_config.current.tenant_id
   soft_delete_retention_days  = 7
@@ -30,7 +30,7 @@ resource "azurerm_key_vault" "secrets" {
 
 resource "kubernetes_secret" "postgres" {
   metadata {
-    name = "postgresql"
+    name      = "postgresql"
     namespace = "smallstep"
   }
 
@@ -41,19 +41,19 @@ resource "kubernetes_secret" "postgres" {
 }
 
 resource "random_password" "veneer_auth" {
-  length           = 32
-  special          = false
+  length  = 32
+  special = false
 }
 
 resource "azurerm_key_vault_secret" "veneer_auth" {
-  name = "veneer-auth"
+  name         = "veneer-auth"
   key_vault_id = azurerm_key_vault.secrets.id
-  value = random_password.veneer_auth.result
+  value        = random_password.veneer_auth.result
 }
 
 resource "kubernetes_secret" "veneer_auth" {
   metadata {
-    name = "auth"
+    name      = "auth"
     namespace = var.namespace
   }
 
@@ -64,7 +64,7 @@ resource "kubernetes_secret" "veneer_auth" {
 
 resource "null_resource" "generate_oidc_jwk" {
   provisioner "local-exec" {
-    command     = "${path.module}/scripts/create_oidc_secret.sh"
+    command = "${path.module}/scripts/create_oidc_secret.sh"
 
     environment = {
       VAULT = azurerm_key_vault.secrets.name
@@ -73,24 +73,24 @@ resource "null_resource" "generate_oidc_jwk" {
 }
 
 data "azurerm_key_vault_secret" "oidcjwk" {
-  name = "oidcjwk"
+  name         = "oidcjwk"
   key_vault_id = azurerm_key_vault.secrets.id
-  depends_on = [null_resource.generate_oidc_jwk]
+  depends_on   = [null_resource.generate_oidc_jwk]
 }
 
 resource "kubernetes_secret" "oidc" {
   metadata {
-    name = "oidc"
+    name      = "oidc"
     namespace = var.namespace
   }
   data = {
     jwks = data.azurerm_key_vault_secret.oidcjwk.value
   }
 }
- 
+
 resource "azurerm_key_vault_secret" "private_issuer_password" {
-  name = "private-issuer-password"
-  value = var.private_issuer_password
+  name         = "private-issuer-password"
+  value        = var.private_issuer_password
   key_vault_id = azurerm_key_vault.secrets.id
 
   # This variable will only be set the first time running terraform and will change to ""
@@ -111,9 +111,9 @@ resource "kubernetes_secret" "private_issuer" {
 }
 
 resource "azurerm_key_vault_secret" "smtp_password" {
-  name                    = "smtp-password"
+  name         = "smtp-password"
   key_vault_id = azurerm_key_vault.secrets.id
-  value = var.smtp_password
+  value        = var.smtp_password
 
   # This variable will only be set the first time running terraform and will change to ""
   # Don't wipe the password when this happens
@@ -124,7 +124,7 @@ resource "azurerm_key_vault_secret" "smtp_password" {
 
 resource "kubernetes_secret" "smtp_password" {
   metadata {
-    name = "smtp"
+    name      = "smtp"
     namespace = "smallstep"
   }
 
@@ -137,10 +137,10 @@ resource "kubernetes_secret" "smtp_password" {
 resource "azurerm_key_vault_secret" "yubihsm_pin" {
   count = var.yubihsm_enabled == true ? 1 : 0
 
-  name                    = "hsm-pin"
+  name         = "hsm-pin"
   key_vault_id = azurerm_key_vault.secrets.id
-  value = var.yubihsm_pin
- 
+  value        = var.yubihsm_pin
+
   # This variable will only be set the first time running terraform and will change to ""
   # Don't wipe the password when this happens
   lifecycle {
@@ -163,19 +163,19 @@ resource "kubernetes_secret" "yubihsm_pin" {
 
 # Randomly generated password for majordomo
 resource "random_password" "majordomo_provisioner_password" {
-  length           = 32
-  special          = false
+  length  = 32
+  special = false
 }
 
 resource "azurerm_key_vault_secret" "majordomo_provisioner_password" {
-  name = "majordomo-provisioner-password"
+  name         = "majordomo-provisioner-password"
   key_vault_id = azurerm_key_vault.secrets.id
-  value = random_password.majordomo_provisioner_password.result
+  value        = random_password.majordomo_provisioner_password.result
 }
 
 resource "kubernetes_secret" "majordomo_provisioner_password" {
   metadata {
-    name = "majordomo-provisioner-password"
+    name      = "majordomo-provisioner-password"
     namespace = var.namespace
   }
 

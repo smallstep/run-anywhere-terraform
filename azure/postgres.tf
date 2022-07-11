@@ -25,13 +25,13 @@ resource "azurerm_postgresql_server" "postgres" {
   storage_mb = 5120
   version    = "11"
 
-  auto_grow_enabled                 = true
-  backup_retention_days             = 7
-  geo_redundant_backup_enabled      = false
+  auto_grow_enabled            = true
+  backup_retention_days        = 7
+  geo_redundant_backup_enabled = false
   # TODO use private endpoint
-  public_network_access_enabled     = true
-  ssl_enforcement_enabled           = true
-  ssl_minimal_tls_version_enforced  = "TLS1_2"
+  public_network_access_enabled    = true
+  ssl_enforcement_enabled          = true
+  ssl_minimal_tls_version_enforced = "TLS1_2"
 }
 
 resource "azurerm_postgresql_firewall_rule" "azure_only" {
@@ -39,6 +39,6 @@ resource "azurerm_postgresql_firewall_rule" "azure_only" {
   resource_group_name = azurerm_resource_group.smallstep.name
   server_name         = azurerm_postgresql_server.postgres.name
   # 0.0.0.0/32 allows access to all Azure services
-  start_ip_address    = "0.0.0.0"
-  end_ip_address      = "0.0.0.0"
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
 }

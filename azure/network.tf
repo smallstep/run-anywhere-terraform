@@ -1,7 +1,7 @@
 resource "random_string" "network" {
-  length = 6
+  length  = 6
   special = false
-  upper = false
+  upper   = false
 }
 
 resource "azurerm_virtual_network" "default" {
@@ -13,9 +13,9 @@ resource "azurerm_virtual_network" "default" {
 
 resource "azurerm_subnet" "default" {
   name                 = "${random_string.network.result}-subnet"
-  resource_group_name = azurerm_resource_group.smallstep.name
+  resource_group_name  = azurerm_resource_group.smallstep.name
   virtual_network_name = azurerm_virtual_network.default.name
-  address_prefixes       = ["10.2.1.0/24"]
+  address_prefixes     = ["10.2.1.0/24"]
 
   enforce_private_link_endpoint_network_policies = false
 }

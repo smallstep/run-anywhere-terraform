@@ -24,6 +24,6 @@ output "primary_blob_host" {
 }
 
 output "azure_storage_key" {
-  value = azurerm_storage_account.default.primary_access_key
+  value     = azurerm_storage_account.default.primary_access_key
   sensitive = true
 }

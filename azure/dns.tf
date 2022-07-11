@@ -4,7 +4,7 @@ resource "azurerm_public_ip" "smallstep_address" {
   resource_group_name = azurerm_resource_group.smallstep.name
   location            = azurerm_resource_group.smallstep.location
   allocation_method   = "Static"
-  sku = "Standard"
+  sku                 = "Standard"
 }
 
 resource "azurerm_dns_zone" "default" {

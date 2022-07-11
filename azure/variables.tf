@@ -47,5 +47,5 @@ variable "yubihsm_pin" {
 
 variable "yubihsm_enabled" {
   description = "Yubi HSM enabled"
-  type = bool
+  type        = bool
 }
