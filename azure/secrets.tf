@@ -195,3 +195,14 @@ resource "kubernetes_secret" "scim-server-credentials" {
     "credentials.json" = ""
   }
 }
+
+resource "kubernetes_secret" "azure_storage_key" {
+  metadata {
+    name      = "azure-storage-key"
+    namespace = var.namespace
+  }
+
+  data = {
+    "AZURE_STORAGE_KEY" = azurerm_key_vault_secret.storage_key.value
+  }
+}

@@ -18,3 +18,15 @@ resource "azurerm_storage_account" "default" {
     use_subdomain = false
   }
 }
+
+resource "azurerm_storage_container" "crls" {
+  name = "crls"
+  storage_account_name = azurerm_storage_account.default.name
+  container_access_type = "blob"
+}
+
+resource "azurerm_key_vault_secret" "storage_key" {
+  name         = "storage-key"
+  value        = azurerm_storage_account.default.primary_access_key
+  key_vault_id = azurerm_key_vault.secrets.id
+}
