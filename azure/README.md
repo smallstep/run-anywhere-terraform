@@ -16,7 +16,7 @@ On first apply, make sure to pass in the values of the following variables to cr
 
 * private_issuer_password
 * smtp_password
-* yubishm_pin (optional)
+* yubihsm_pin (optional)
 
 Our recommendation is creating high-level variables with a default value of an empty string to pass into the module block; subsequently, you can pass in the actual secrets during your first Terraform apply of the module. These variables are marked "secret" in Terraform to avoid leaking them in Terraform's responses on the command line, and we recommend passing the command line `HISTCONTROL=ignorespace` before running your apply to prevent leaking secrets into your session history. (If you are using a YubiHSM2 and have set the value of `hsm_enabled = true`, also pass in the HSM PIN code in hexadecimal and password to variable `yubihsm_pin`. For example, authentication key id `0x0001` with password `password` would follow the form: -var yubihsm_pin="0001password")
 
@@ -52,7 +52,7 @@ variable "smtp_password" {
 
 variable "yubihsm_pin" {
   default     = ""
-  description = "Yubi HSM pin"
+  description = "Yubi HSM PIN"
   type        = string
   sensitive   = true
 }
@@ -63,7 +63,7 @@ provider "azurerm" {
 
 
 module "run_anywhere" {
-  source = "/home/areed/src/github.com/smallstep/run-anywhere-terraform/azure"
+  source = "github.com/smallstep/run-anywhere-terraform.git//azure"
 
   base_domain             = "azure.example.com"
   resource_group_name     = "smallstep"
