@@ -29,7 +29,7 @@ resource "null_resource" "post_policy" {
   provisioner "local-exec" {
     on_failure  = fail
     interpreter = ["/bin/bash", "-c"]
-    when = create
+    when        = create
     command     = <<EOT
         reg=$(echo ${aws_eks_cluster.eks.arn} | cut -f4 -d':')
         acc=$(echo ${aws_eks_cluster.eks.arn} | cut -f5 -d':')

@@ -104,7 +104,7 @@ resource "google_service_account_key" "scim_server_key" {
 
 // Majordomo workload identity and roles
 resource "google_service_account" "majordomo" {
-  project = var.project_id
+  project      = var.project_id
   account_id   = "majordomo"
   display_name = "majordomo"
   depends_on   = [google_project_service.gke]
@@ -196,7 +196,7 @@ resource "google_service_account_iam_binding" "veto_workload_identity" {
 
 resource "google_storage_bucket_iam_binding" "veto" {
   bucket = google_storage_bucket.veto_crls.name
-  role = "roles/storage.objectAdmin"
+  role   = "roles/storage.objectAdmin"
   members = [
     "serviceAccount:${google_service_account.veto.email}",
   ]

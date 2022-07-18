@@ -8,7 +8,7 @@
 # These addresses cannot change at any point so we instantiate an EIP
 resource "aws_eip" "cluster" {
   count = length(var.subnets_public)
-  tags  = {
+  tags = {
     Name        = var.default_name
     Description = var.default_description
   }
@@ -104,3 +104,12 @@ resource "aws_route53_record" "crl" {
   type    = "CNAME"
   records = ["crl.${aws_route53_zone.cluster.name}.s3.${var.region}.amazonaws.com."]
 }
+
+resource "aws_route53_record" "scif" {
+  zone_id = aws_route53_zone.cluster.id
+  name    = "scif.infra.${aws_route53_zone.cluster.name}"
+  ttl     = 300
+  type    = "A"
+  records = concat(aws_eip.cluster[*].public_ip)
+}
+

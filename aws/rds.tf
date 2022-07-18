@@ -15,18 +15,18 @@ data "archive_file" "make_dbs" {
 locals {
   # list of all database names needed
   # will not need to change
-  db_names         = ["landlord", "certificates", "web", "depot", "folk", "memoir", "majordomo", "moody", "courier", "veto", "approvalq"]
+  db_names = ["landlord", "certificates", "web", "depot", "folk", "memoir", "majordomo", "moody", "courier", "veto", "approvalq"]
 
   cw_logging_value = var.rds_enable_cloudwatch_logging == true ? ["postgresql"] : [""]
 
   # All information needed to log into a database cluster
   # Will be stored in SecretsManager
   master_creds = {
-    db_names      = local.db_names
-    host          = aws_rds_cluster.smallstep.endpoint
-    username      = var.rds_master_username
-    password      = random_password.initial_master_password.result
-    port          = var.rds_port
+    db_names = local.db_names
+    host     = aws_rds_cluster.smallstep.endpoint
+    username = var.rds_master_username
+    password = random_password.initial_master_password.result
+    port     = var.rds_port
   }
 
   rds_default_params = var.rds_enable_cloudwatch_logging == true ? local.rds_logging_params : local.rds_non_logging_params
@@ -34,8 +34,8 @@ locals {
   # If we're going to set up logs for Aurora, the following are what we need to make sure everything works
   rds_logging_params = [
     {
-      name         = "idle_in_transaction_session_timeout"
-      value        = "${var.rds_transaction_timeout}"
+      name  = "idle_in_transaction_session_timeout"
+      value = "${var.rds_transaction_timeout}"
     },
     {
       name  = "auto_explain.log_analyze"
@@ -60,8 +60,8 @@ locals {
   ]
 
   rds_non_logging_params = [{
-    name         = "idle_in_transaction_session_timeout"
-    value        = "${var.rds_transaction_timeout}"
+    name  = "idle_in_transaction_session_timeout"
+    value = "${var.rds_transaction_timeout}"
   }]
 }
 
@@ -92,7 +92,7 @@ resource "aws_db_parameter_group" "smallstep" {
 
 resource "aws_lambda_function" "make_dbs" {
   filename                       = data.archive_file.make_dbs.output_path
-  function_name                   = "${var.default_name}-make-dbs"
+  function_name                  = "${var.default_name}-make-dbs"
   role                           = aws_iam_role.make_dbs.arn
   handler                        = "make_dbs.lambda_handler"
   source_code_hash               = data.archive_file.make_dbs.output_base64sha256
@@ -134,7 +134,7 @@ resource "aws_iam_role" "make_dbs" {
           Service = "lambda.amazonaws.com"
         }
         Effect = "Allow"
-        Sid = ""
+        Sid    = ""
       }
     ]
   })
@@ -199,7 +199,7 @@ resource "aws_rds_cluster" "smallstep" {
   engine_version            = var.rds_engine_version
   final_snapshot_identifier = "${var.default_name}-final"
   storage_encrypted         = true
-  kms_key_id                = aws_kms_key.smallstep.arn 
+  kms_key_id                = aws_kms_key.smallstep.arn
   port                      = var.rds_port
 
   # The master username/password are also stored in SecretsManager
@@ -207,8 +207,8 @@ resource "aws_rds_cluster" "smallstep" {
   master_username = var.rds_master_username
 
   # Backup in case the database is destroyed
-  skip_final_snapshot       = false
-  vpc_security_group_ids    = [aws_security_group.rds.id]
+  skip_final_snapshot    = false
+  vpc_security_group_ids = [aws_security_group.rds.id]
 
   # Export logs to CW
   enabled_cloudwatch_logs_exports = local.cw_logging_value
@@ -234,7 +234,7 @@ resource "aws_rds_cluster_instance" "smallstep" {
   apply_immediately   = true
 
   # Making the first db the preferred writer for QoL reasons
-  promotion_tier      = count.index
+  promotion_tier = count.index
 
   # Please tune this group to suit your needs
   db_parameter_group_name = aws_db_parameter_group.smallstep.name
@@ -297,7 +297,7 @@ resource "aws_security_group_rule" "rds_to_rds" {
 
 resource "null_resource" "make_dbs" {
   provisioner "local-exec" {
-    command     = "aws lambda invoke --function-name ${aws_lambda_function.make_dbs.arn} /dev/null"
+    command = "aws lambda invoke --function-name ${aws_lambda_function.make_dbs.arn} /dev/null"
   }
 
   depends_on = [

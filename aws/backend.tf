@@ -63,5 +63,5 @@ data "aws_region" "current" {}
 
 data "aws_subnet" "public" {
   count = length(var.subnets_public)
-  id = var.subnets_public[count.index]
+  id    = var.subnets_public[count.index]
 }

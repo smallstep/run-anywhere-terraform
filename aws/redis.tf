@@ -41,8 +41,8 @@ resource "aws_elasticache_parameter_group" "redis" {
   dynamic "parameter" {
     for_each = concat(local.redis_default_params, var.redis_desired_params)
     content {
-      name         = parameter.value.name
-      value        = parameter.value.value
+      name  = parameter.value.name
+      value = parameter.value.value
     }
   }
 }

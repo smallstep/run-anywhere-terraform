@@ -18,7 +18,7 @@ resource "google_dns_record_set" "web_api" {
   ttl          = 300
   type         = "A"
   managed_zone = google_dns_managed_zone.default.name
-  rrdatas = [google_compute_address.smallstep_address.address]
+  rrdatas      = [google_compute_address.smallstep_address.address]
 }
 
 resource "google_dns_record_set" "web_auth" {
@@ -27,7 +27,7 @@ resource "google_dns_record_set" "web_auth" {
   ttl          = 300
   type         = "A"
   managed_zone = google_dns_managed_zone.default.name
-  rrdatas = [google_compute_address.smallstep_address.address]
+  rrdatas      = [google_compute_address.smallstep_address.address]
 }
 
 resource "google_dns_record_set" "web_api_scim" {
@@ -36,7 +36,7 @@ resource "google_dns_record_set" "web_api_scim" {
   ttl          = 300
   type         = "A"
   managed_zone = google_dns_managed_zone.default.name
-  rrdatas = [google_compute_address.smallstep_address.address]
+  rrdatas      = [google_compute_address.smallstep_address.address]
 }
 
 resource "google_dns_record_set" "web_api_gateway" {
@@ -45,7 +45,7 @@ resource "google_dns_record_set" "web_api_gateway" {
   ttl          = 300
   type         = "A"
   managed_zone = google_dns_managed_zone.default.name
-  rrdatas = [google_compute_address.smallstep_address.address]
+  rrdatas      = [google_compute_address.smallstep_address.address]
 }
 
 resource "google_dns_record_set" "web_app" {
@@ -54,7 +54,7 @@ resource "google_dns_record_set" "web_app" {
   ttl          = 300
   type         = "A"
   managed_zone = google_dns_managed_zone.default.name
-  rrdatas = [google_compute_address.smallstep_address.address]
+  rrdatas      = [google_compute_address.smallstep_address.address]
 }
 
 resource "google_dns_record_set" "landlord_teams" {
@@ -63,7 +63,7 @@ resource "google_dns_record_set" "landlord_teams" {
   ttl          = 300
   type         = "A"
   managed_zone = google_dns_managed_zone.default.name
-  rrdatas = [google_compute_address.smallstep_address.address]
+  rrdatas      = [google_compute_address.smallstep_address.address]
 }
 
 resource "google_dns_record_set" "magpie_teams" {
@@ -90,7 +90,7 @@ resource "google_dns_record_set" "ocsp" {
   ttl          = 300
   type         = "A"
   managed_zone = google_dns_managed_zone.default.name
-  rrdatas = [google_compute_address.smallstep_address.address]
+  rrdatas      = [google_compute_address.smallstep_address.address]
 }
 
 resource "google_dns_record_set" "crl" {
@@ -99,7 +99,7 @@ resource "google_dns_record_set" "crl" {
   ttl          = 300
   type         = "CNAME"
   managed_zone = google_dns_managed_zone.default.name
-  rrdatas = ["c.storage.googleapis.com."]
+  rrdatas      = ["c.storage.googleapis.com."]
 }
 
 resource "google_dns_record_set" "approvalq" {
@@ -108,5 +108,14 @@ resource "google_dns_record_set" "approvalq" {
   ttl          = 300
   type         = "A"
   managed_zone = google_dns_managed_zone.default.name
-  rrdatas = [google_compute_address.smallstep_address.address]
+  rrdatas      = [google_compute_address.smallstep_address.address]
+}
+
+resource "google_dns_record_set" "scif" {
+  project      = var.project_id
+  name         = "scif.infra.${google_dns_managed_zone.default.dns_name}"
+  ttl          = 300
+  type         = "A"
+  managed_zone = google_dns_managed_zone.default.name
+  rrdatas      = [google_compute_address.smallstep_address.address]
 }

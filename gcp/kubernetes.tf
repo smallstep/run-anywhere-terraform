@@ -43,7 +43,7 @@ resource "kubernetes_namespace" "install_namespace" {
     }
   }
 
-  depends_on  = [google_container_cluster.primary]
+  depends_on = [google_container_cluster.primary]
 }
 
 resource "kubernetes_secret" "scim-server-credentials" {
@@ -54,7 +54,7 @@ resource "kubernetes_secret" "scim-server-credentials" {
   data = {
     "credentials.json" = base64decode(google_service_account_key.scim_server_key.private_key)
   }
-  depends_on  = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }
 
 resource "kubernetes_secret" "postgresql" {
@@ -65,7 +65,7 @@ resource "kubernetes_secret" "postgresql" {
   data = {
     password = data.google_kms_secret.postgresql_password.plaintext
   }
-  depends_on  = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }
 
 resource "kubernetes_secret" "auth" {
@@ -76,7 +76,7 @@ resource "kubernetes_secret" "auth" {
   data = {
     secret = data.google_kms_secret.auth_secret.plaintext
   }
-  depends_on  = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }
 
 resource "kubernetes_secret" "majordomo-provisioner-password" {
@@ -87,7 +87,7 @@ resource "kubernetes_secret" "majordomo-provisioner-password" {
   data = {
     password = data.google_kms_secret.majordomo_provisioner_password.plaintext
   }
-  depends_on  = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }
 
 resource "kubernetes_secret" "oidc" {
@@ -98,7 +98,7 @@ resource "kubernetes_secret" "oidc" {
   data = {
     jwks = data.google_kms_secret.oidc_jwks.plaintext
   }
-  depends_on  = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }
 
 resource "kubernetes_secret" "smtp" {
@@ -109,7 +109,7 @@ resource "kubernetes_secret" "smtp" {
   data = {
     password = data.google_kms_secret.smtp_password.plaintext
   }
-  depends_on  = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }
 
 resource "kubernetes_secret" "private_issuer" {
@@ -120,7 +120,7 @@ resource "kubernetes_secret" "private_issuer" {
   data = {
     password = data.google_kms_secret.private_issuer_password.plaintext
   }
-  depends_on  = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }
 
 resource "kubernetes_secret" "yubihsm2_pin" {
@@ -131,5 +131,5 @@ resource "kubernetes_secret" "yubihsm2_pin" {
   data = {
     "pin.txt" = data.google_kms_secret.private_issuer_password.plaintext
   }
-  depends_on  = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }

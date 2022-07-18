@@ -104,7 +104,7 @@ resource "aws_secretsmanager_secret" "private_issuer_password" {
   description             = "${var.default_name} private issuer password used by EKS"
   kms_key_id              = aws_kms_key.smallstep.id
   recovery_window_in_days = var.backup_retention_period
-  
+
   tags = {
     Name        = "${var.default_name}-private-issuer-password"
     Description = var.default_description
@@ -138,7 +138,7 @@ resource "aws_secretsmanager_secret" "smtp_password" {
 
 # Instantiate the above secrets with their given values
 resource "aws_secretsmanager_secret_version" "auth_secret" {
-  secret_id = aws_secretsmanager_secret.auth_secret.id
+  secret_id     = aws_secretsmanager_secret.auth_secret.id
   secret_string = random_password.auth_secret.result
 }
 
@@ -157,17 +157,17 @@ resource "aws_secretsmanager_secret_version" "yubihsm_pin" {
 }
 
 resource "aws_secretsmanager_secret_version" "majordomo_secret" {
-  secret_id = aws_secretsmanager_secret.majordomo_secret.id
+  secret_id     = aws_secretsmanager_secret.majordomo_secret.id
   secret_string = random_password.majordomo_secret.result
 }
 
 resource "aws_secretsmanager_secret_version" "master_password_initial" {
-  secret_id = aws_secretsmanager_secret.master_password.id
+  secret_id     = aws_secretsmanager_secret.master_password.id
   secret_string = jsonencode(local.master_creds)
 }
 
 resource "aws_secretsmanager_secret_version" "master_password_string" {
-  secret_id = aws_secretsmanager_secret.master_password_string.id
+  secret_id     = aws_secretsmanager_secret.master_password_string.id
   secret_string = random_password.initial_master_password.result
 }
 
@@ -196,40 +196,40 @@ resource "aws_secretsmanager_secret_version" "smtp_password" {
 # Once the KMS key has been created, we generate client secrets for the key to encrypt
 resource "null_resource" "generate_oidc_jwk" {
   provisioner "local-exec" {
-    command     = "${path.module}/scripts/create_oidc_secret.sh"
+    command = "${path.module}/scripts/create_oidc_secret.sh"
 
     environment = {
       secret_id = aws_secretsmanager_secret.oidc_jwks.id
     }
-  } 
+  }
 }
 
 # We also generate a temporary SCIM key for the cluster to reference
 # If using SCIM for provisioning, replace this value in SecretsManager and re-apply
 resource "null_resource" "generate_temp_scim_key" {
   provisioner "local-exec" {
-    command     = "${path.module}/scripts/create_temp_scim_key.sh"
+    command = "${path.module}/scripts/create_temp_scim_key.sh"
 
     environment = {
       secret_id = aws_secretsmanager_secret.scim_key.id
     }
-  } 
+  }
 }
 
 # Randomly generated password for the auth secret
 resource "random_password" "auth_secret" {
-  length           = 32
-  special          = false
+  length  = 32
+  special = false
 }
 
 # Generate a randomized master password for the database clusters
 resource "random_password" "initial_master_password" {
-  length = 32
+  length  = 32
   special = "false"
 }
 
 # Randomly generated password for majordomo
 resource "random_password" "majordomo_secret" {
-  length           = 32
-  special          = false
+  length  = 32
+  special = false
 }

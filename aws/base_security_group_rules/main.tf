@@ -90,7 +90,7 @@ resource "aws_security_group_rule" "ingress3" {
 resource "aws_security_group_rule" "ingress4" {
   type              = "ingress"
   from_port         = 11 # ICMP Type
-  to_port           = 0 # ICMP Code
+  to_port           = 0  # ICMP Code
   protocol          = "icmp"
   cidr_blocks       = [local.icmp_cidr_block]
   security_group_id = var.security_group_id
