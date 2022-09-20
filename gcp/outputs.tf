@@ -24,6 +24,10 @@ output "dns_scim_domain" {
   value = trimsuffix(google_dns_record_set.web_api_scim.name, ".")
 }
 
+output "dns_linkedca_domain" {
+  value = trimsuffix(google_dns_record_set.api_linkedca.name, ".")
+}
+
 output "dns_zone" {
   value = google_dns_managed_zone.default.dns_name
 }
