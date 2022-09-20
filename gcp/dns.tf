@@ -39,6 +39,15 @@ resource "google_dns_record_set" "web_api_scim" {
   rrdatas      = [google_compute_address.smallstep_address.address]
 }
 
+resource "google_dns_record_set" "api_linkedca" {
+  project      = var.project_id
+  name         = "linkedca.api.${google_dns_managed_zone.default.dns_name}"
+  ttl          = 300
+  type         = "A"
+  managed_zone = google_dns_managed_zone.default.name
+  rrdatas      = [google_compute_address.smallstep_address.address]
+}
+
 resource "google_dns_record_set" "web_api_gateway" {
   project      = var.project_id
   name         = "gateway.api.${google_dns_managed_zone.default.dns_name}"
