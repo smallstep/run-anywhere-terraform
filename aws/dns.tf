@@ -113,3 +113,10 @@ resource "aws_route53_record" "scif" {
   records = concat(aws_eip.cluster[*].public_ip)
 }
 
+resource "aws_route53_record" "linkedca_api" {
+  zone_id = aws_route53_zone.cluster.id
+  name    = "linkedca.api.${aws_route53_zone.cluster.name}"
+  ttl     = 300
+  type    = "A"
+  records = concat(aws_eip.cluster[*].public_ip)
+}

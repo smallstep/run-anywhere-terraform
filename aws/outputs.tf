@@ -49,6 +49,10 @@ output "route53_gateway_domain" {
   value = trimsuffix(aws_route53_record.web_api_gateway.name, ".")
 }
 
+output "route53_linkedca_api_domain" {
+  value = trimsuffix(aws_route53_record.linkedca_api.name, ".")
+}
+
 output "route53_name_servers" {
   value = aws_route53_zone.cluster.name_servers
 }

@@ -99,3 +99,11 @@ resource "azurerm_dns_a_record" "approvalq" {
   ttl                 = 300
   records             = [azurerm_public_ip.smallstep_address.ip_address]
 }
+
+resource "azurerm_dns_a_record" "linkedca_api" {
+  name                = "linkedca.api"
+  zone_name           = azurerm_dns_zone.default.name
+  resource_group_name = azurerm_resource_group.smallstep.name
+  ttl                 = 300
+  records             = [azurerm_public_ip.smallstep_address.ip_address]
+}
