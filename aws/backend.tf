@@ -46,7 +46,7 @@ provider "kubernetes" {
 
   # Since EKS uses a token with a 15 minute lifetime. Use this exec to keep it up to date.
   exec {
-    api_version = "client.authentication.k8s.io/v1alpha1"
+    api_version = "client.authentication.k8s.io/v1beta1"
     args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.eks.name]
     command     = "aws"
   }
