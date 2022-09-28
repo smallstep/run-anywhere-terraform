@@ -127,8 +127,9 @@ variable "project_id" {
   type        = string
 }
 
+# run anywhere requires a minimum Redis version of 6.2
 variable "redis_version" {
-  default     = "REDIS_4_0"
+  default     = "REDIS_6_X"
   description = "Version of Redis used for the `run anywhere` deployment."
   type        = string
 }

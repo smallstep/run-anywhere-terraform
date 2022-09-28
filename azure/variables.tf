@@ -33,6 +33,13 @@ variable "private_issuer_password" {
   sensitive   = true
 }
 
+# This must be AT LEAST 6
+variable "redis_version" {
+  default     = 6
+  description = "The version of Redis to run."
+  type        = number
+}
+
 variable "smtp_password" {
   description = "The SMTP password."
   type        = string
