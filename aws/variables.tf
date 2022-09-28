@@ -117,15 +117,17 @@ variable "redis_desired_params" {
   */
 }
 
+# Must be AT LEAST "6.2"
 variable "redis_engine_version" {
-  default     = "5.0.6"
+  default     = "6.2"
   description = "Desired engine version for the Redis instance."
   type        = string
 }
 
+# Must be AT LEAST "redis6.0"
 variable "redis_family" {
-  default     = "redis5.0"
-  description = "Desired family for the Redis instance: redis4.0 or redis5.0."
+  default     = "redis6.0"
+  description = "Desired family for the Redis instance."
   type        = string
 }
 

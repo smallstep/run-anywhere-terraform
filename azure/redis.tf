@@ -11,7 +11,7 @@ resource "azurerm_redis_cache" "smallstep" {
   enable_non_ssl_port           = false
   minimum_tls_version           = "1.2"
   public_network_access_enabled = false
-  redis_version                 = 6
+  redis_version                 = var.redis_version
 }
 
 resource "azurerm_private_endpoint" "redis" {
