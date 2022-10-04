@@ -120,3 +120,11 @@ resource "aws_route53_record" "linkedca_api" {
   type    = "A"
   records = concat(aws_eip.cluster[*].public_ip)
 }
+
+resource "aws_route53_record" "inventory" {
+  zone_id = aws_route53_zone.cluster.id
+  name    = "inventory.${aws_route53_zone.cluster.name}"
+  ttl     = 300
+  type    = "A"
+  records = concat(aws_eip.cluster[*].public_ip)
+}
