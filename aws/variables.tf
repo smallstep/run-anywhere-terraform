@@ -41,7 +41,7 @@ variable "default_name" {
 }
 
 variable "k8s_alb_controller_version" {
-  default     = "2.4.1"
+  default     = "2.4.4"
   description = "Version of the aws-load-balancer-controller to run in the cluster."
   type        = string
 }
@@ -119,14 +119,14 @@ variable "redis_desired_params" {
 
 # Must be AT LEAST "6.2"
 variable "redis_engine_version" {
-  default     = "6.2"
+  default     = "6.x"
   description = "Desired engine version for the Redis instance."
   type        = string
 }
 
 # Must be AT LEAST "redis6.0"
 variable "redis_family" {
-  default     = "redis6.0"
+  default     = "redis6.x"
   description = "Desired family for the Redis instance."
   type        = string
 }
