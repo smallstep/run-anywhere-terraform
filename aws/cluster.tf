@@ -198,6 +198,13 @@ resource "aws_iam_role_policy_attachment" "eks_node_group_3" {
   role       = aws_iam_role.eks_node_group.name
 }
 
+# New requirement to run the EBS CSI Driver
+# which is a new requirement to mount persistent volumes
+resource "aws_iam_role_policy_attachment" "eks_node_group_4" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.eks_node_group.name
+}
+
 # Allow connections from the load balancer in the public subnets
 resource "aws_security_group_rule" "incoming_connections" {
   type              = "ingress"
@@ -245,6 +252,19 @@ resource "null_resource" "allow_public_lb" {
   provisioner "local-exec" {
     command = "aws ec2 create-tags --resources ${each.key} --tags Key=kubernetes.io/role/elb,Value=1"
   }
+}
+
+# We must manually add the EBS CSI addon to allow
+# persistent volumes to attach
+resource "null_resource" "ebs_csi" {
+  provisioner "local-exec" {
+    command = "aws eks create-addon --cluster-name ${aws_eks_cluster.eks.name} --addon-name aws-ebs-csi-driver"
+  }
+
+  depends_on = [
+    aws_eks_cluster.eks,
+    aws_eks_node_group.eks
+  ]
 }
 
 # Pull down the kube config file after the cluster's been fulling created
