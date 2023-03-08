@@ -52,6 +52,10 @@ output "redis_port" {
   value = google_redis_instance.smallstep.port
 }
 
+output "reserved_peering_ranges" {
+  value = google_compute_global_address.service_allocation.name
+}
+
 output "service_account_landlord" {
   value = google_service_account.landlord.email
 }
@@ -72,26 +76,6 @@ output "sql_master_host_public" {
   value = google_sql_database_instance.master.public_ip_address
 }
 
-output "sql_db_depot" {
-  value = google_sql_database.depot.name
-}
-
-output "sql_db_folk" {
-  value = google_sql_database.folk.name
-}
-
-output "sql_db_memoir" {
-  value = google_sql_database.memoir.name
-}
-
-output "sql_db_courier" {
-  value = google_sql_database.courier.name
-}
-
 output "sql_db_web_user" {
   value = google_sql_user.postgres.name
-}
-
-output "sql_db_names" {
-  value = local.db_names
 }

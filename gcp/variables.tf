@@ -39,8 +39,9 @@ variable "cloudsql_log_min_duration_statement" {
   type        = number
 }
 
+# Setting this will override the name variable for the database
 variable "db_name" {
-  default     = "smallstep"
+  default     = ""
   description = "Name assigned to the PostgreSQL database sitting behind the cluster."
   type        = string
 }
@@ -69,8 +70,9 @@ variable "k8s_channel" {
   type        = string
 }
 
+# Setting this will override the name variable for the cluster
 variable "k8s_cluster_name" {
-  default     = "run-anywhere"
+  default     = ""
   description = "Name for the GKE cluster created by the module."
   type        = string
 }
@@ -151,6 +153,12 @@ variable "region" {
   type        = string
 }
 
+variable "name" {
+  default     = "smallstep"
+  description = "Optional name overriding all names for module resources."
+  type        = string
+}
+
 variable "sql_database_version" {
   default     = "POSTGRES_11"
   description = "Version of PostgreSQL to run for the DB cluster."
@@ -160,4 +168,15 @@ variable "sql_database_version" {
 variable "zone" {
   description = "GCP zone for the project."
   type        = string
+}
+
+# If false, then you'll have to add output.reserved_peering_ranges
+# to your servicenetworking google_service_networking_connection.
+# 
+# Should be changed to false and managed externally if there are other
+# service networking connections in place.
+# ie. another instantiation of this module
+variable "managed_servicenetworking" {
+  default     = true
+  description = "If module manages connection to servicenetworking"
 }

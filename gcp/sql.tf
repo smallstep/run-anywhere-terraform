@@ -12,27 +12,13 @@ data "google_kms_secret" "postgresql_password" {
 
 locals {
   kube_ctx = "gke_${var.project_id}_${google_container_cluster.primary.location}_${google_container_cluster.primary.name}"
-  db_names = join(" ", [
-    google_sql_database.landlord.name,
-    google_sql_database.certificates.name,
-    google_sql_database.web.name,
-    google_sql_database.depot.name,
-    google_sql_database.folk.name,
-    google_sql_database.memoir.name,
-    google_sql_database.courier.name,
-    google_sql_database.majordomo.name,
-    google_sql_database.moody.name,
-    google_sql_database.veto.name,
-    google_sql_database.approvalq.name,
-  ])
 }
 
 resource "google_sql_database_instance" "master" {
-  name             = var.db_name
+  name             = var.db_name == "" ? var.name : var.db_name
   project          = var.project_id
   database_version = var.sql_database_version
   region           = var.region
-  depends_on       = [google_service_networking_connection.servicenetworking]
   settings {
     tier = var.cloudsql_instance_tier
     backup_configuration {
@@ -55,8 +41,8 @@ resource "google_sql_database_instance" "master" {
     }
     availability_type = var.cloudsql_high_availability ? "REGIONAL" : "ZONAL"
     user_labels = {
-      "cluster_name"  = var.db_name
-      "instance_name" = "${var.db_name}-primary"
+      "cluster_name"  = var.db_name == "" ? var.name : var.db_name
+      "instance_name" = var.db_name == "" ? "${var.name}-primary" : "${var.db_name}-primary"
     }
     database_flags {
       name  = "log_min_duration_statement"
@@ -87,7 +73,14 @@ resource "google_sql_database" "web" {
   instance = google_sql_database_instance.master.name
 }
 
+resource "google_sql_database" "teller" {
+  project  = var.project_id
+  name     = "teller"
+  instance = google_sql_database_instance.master.name
+}
+
 // databases for new microservices stack
+
 resource "google_sql_database" "depot" {
   project  = var.project_id
   name     = "depot"
@@ -106,6 +99,36 @@ resource "google_sql_database" "memoir" {
   instance = google_sql_database_instance.master.name
 }
 
+resource "google_sql_database" "veneer" {
+  project  = var.project_id
+  name     = "veneer"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "courier" {
+  project  = var.project_id
+  name     = "courier"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "concierge" {
+  project  = var.project_id
+  name     = "concierge"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "tally" {
+  project  = var.project_id
+  name     = "tally"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "voncount" {
+  project  = var.project_id
+  name     = "voncount"
+  instance = google_sql_database_instance.master.name
+}
+
 resource "google_sql_database" "majordomo" {
   project  = var.project_id
   name     = "majordomo"
@@ -118,9 +141,9 @@ resource "google_sql_database" "moody" {
   instance = google_sql_database_instance.master.name
 }
 
-resource "google_sql_database" "courier" {
+resource "google_sql_database" "approvalq" {
   project  = var.project_id
-  name     = "courier"
+  name     = "approvalq"
   instance = google_sql_database_instance.master.name
 }
 
@@ -130,9 +153,21 @@ resource "google_sql_database" "veto" {
   instance = google_sql_database_instance.master.name
 }
 
-resource "google_sql_database" "approvalq" {
+resource "google_sql_database" "inventory" {
   project  = var.project_id
-  name     = "approvalq"
+  name     = "inventory"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "gateway" {
+  project  = var.project_id
+  name     = "gateway"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "guardian" {
+  project  = var.project_id
+  name     = "guardian"
   instance = google_sql_database_instance.master.name
 }
 

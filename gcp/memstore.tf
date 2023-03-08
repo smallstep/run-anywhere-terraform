@@ -10,7 +10,7 @@ resource "google_redis_instance" "smallstep" {
   region             = var.region
   redis_version      = var.redis_version
   tier               = var.redis_tier
-  name               = "smallstep"
+  name               = "${var.name}"
   memory_size_gb     = var.redis_memory_size_gb
   authorized_network = data.google_compute_network.default.self_link
 }

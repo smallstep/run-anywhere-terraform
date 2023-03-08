@@ -8,7 +8,7 @@ resource "google_container_cluster" "primary" {
   provider = google-beta
   project  = var.project_id
 
-  name     = var.k8s_cluster_name
+  name     = var.k8s_cluster_name == "" ? var.name : var.k8s_cluster_name
   location = var.region
 
   release_channel {
@@ -57,7 +57,7 @@ resource "google_container_node_pool" "primary" {
   provider = google-beta
   project  = var.project_id
 
-  name     = "smallstep"
+  name     = var.name
   location = var.region
   cluster  = google_container_cluster.primary.name
 

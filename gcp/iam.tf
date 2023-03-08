@@ -6,8 +6,8 @@
 
 resource "google_service_account" "landlord" {
   project      = var.project_id
-  account_id   = "landlord"
-  display_name = "landlord"
+  account_id   = "${var.name}-landlord"
+  display_name = "${var.name}-landlord"
   depends_on   = [google_project_service.gke]
 }
 
@@ -47,8 +47,8 @@ resource "google_project_iam_member" "landlord_kms_verifier" {
 // web-api workload identity and roles
 resource "google_service_account" "web_api" {
   project      = var.project_id
-  account_id   = "web-api"
-  display_name = "web-api"
+  account_id   = "${var.name}-web-api"
+  display_name = "${var.name}-web-api"
 }
 
 resource "google_service_account_iam_binding" "web_api_workload_identity" {
@@ -63,8 +63,8 @@ resource "google_service_account_iam_binding" "web_api_workload_identity" {
 // web-frontend workload identity and roles
 resource "google_service_account" "web_frontend" {
   project      = var.project_id
-  account_id   = "web-frontend"
-  display_name = "web-frontend"
+  account_id   = "${var.name}-web-frontend"
+  display_name = "${var.name}-web-frontend"
   depends_on   = [google_project_service.gke]
 }
 
@@ -84,8 +84,8 @@ resource "google_service_account_iam_binding" "web_frontend_workload_identity" {
 // fixed.
 resource "google_service_account" "scim_server" {
   project      = var.project_id
-  account_id   = "scim-server"
-  display_name = "scim-server"
+  account_id   = "${var.name}-scim-server"
+  display_name = "${var.name}-scim-server"
   depends_on   = [google_project_service.gke]
 }
 
@@ -105,8 +105,8 @@ resource "google_service_account_key" "scim_server_key" {
 // Majordomo workload identity and roles
 resource "google_service_account" "majordomo" {
   project      = var.project_id
-  account_id   = "majordomo"
-  display_name = "majordomo"
+  account_id   = "${var.name}-majordomo"
+  display_name = "${var.name}-majordomo"
   depends_on   = [google_project_service.gke]
 }
 
@@ -129,8 +129,8 @@ resource "google_service_account_iam_binding" "majordomo_workload_identity" {
 resource "google_service_account" "moody" {
   project = var.project_id
   // 'moody' is too short to pass validation rules, hence 'moody-acc'
-  account_id   = "moody-acc"
-  display_name = "moody-acc"
+  account_id   = "${var.name}-moody-acc"
+  display_name = "${var.name}-moody-acc"
   depends_on   = [google_project_service.gke]
 }
 
@@ -152,8 +152,8 @@ resource "google_service_account_iam_binding" "moody_workload_identity" {
 // Magpie workload identity and roles
 resource "google_service_account" "magpie" {
   project      = var.project_id
-  account_id   = "magpie"
-  display_name = "magpie"
+  account_id   = "${var.name}-magpie"
+  display_name = "${var.name}-magpie"
   depends_on   = [google_project_service.gke]
 }
 
@@ -180,8 +180,8 @@ resource "google_service_account_key" "magpie" {
 
 resource "google_service_account" "veto" {
   project      = var.project_id
-  account_id   = "veto-acc"
-  display_name = "veto-acc"
+  account_id   = "${var.name}-veto-acc"
+  display_name = "${var.name}-veto-acc"
   depends_on   = [google_project_service.gke]
 }
 
@@ -209,8 +209,8 @@ resource "google_service_account_key" "veto" {
 // Approvalq workload identity and roles
 resource "google_service_account" "approvalq" {
   project      = var.project_id
-  account_id   = "approvalq"
-  display_name = "approvalq"
+  account_id   = "${var.name}-approvalq"
+  display_name = "${var.name}-approvalq"
   depends_on   = [google_project_service.gke]
 }
 

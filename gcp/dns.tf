@@ -7,7 +7,7 @@
 resource "google_dns_managed_zone" "default" {
   project     = var.project_id
   depends_on  = [google_project_service.dns]
-  name        = "default"
+  name        = var.name
   dns_name    = "${var.base_domain}."
   description = "Certificates aren't hard."
 }
