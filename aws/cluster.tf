@@ -1,7 +1,7 @@
 #----------------------------------------------------------------------------------
-# 
+#
 # This file is where we set up an EKS Cluster for Kubernetes and related resources
-# 
+#
 #----------------------------------------------------------------------------------
 
 # Set an authentication endpoint for the Kubernetes provider in kubernetes.tf
@@ -42,23 +42,34 @@ locals {
 }
 
 # Set up the SG assigned to each cluster with a base set of recommended ICMP rules
-# If you want to test from the public internet, you can uncomment the `public_facing` line
-# Defaults to only allowing these rules internal to the VPC
 module "eks_base_security_group_rules" {
-  source = "./base_security_group_rules"
-  # The SG is created with this rule already applied
-  egress_all        = false
-  public_facing     = var.security_groups_public
-  security_group_id = aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id
+  source                      = "./base_security_group_rules"
+  vpc                         = var.vpc
+  security_group_id           = aws_eks_cluster.eks.vpc_config[0].cluster_security_group_id
+  security_groups_cidr_blocks = var.security_groups_cidr_blocks
 }
 
 resource "aws_eks_cluster" "eks" {
   name     = var.default_name
   role_arn = aws_iam_role.eks_cluster.arn
 
+  encryption_config {
+    resources = ["secrets"]
+    provider {
+      key_arn = aws_kms_key.smallstep.arn
+    }
+  }
+
+  enabled_cluster_log_types = ["api", "authenticator", "audit", "scheduler", "controllerManager"]
+
+  # We need access to configure the EKS cluster from the workstation. Ignoring these tfsec rules. The
+  # Security Groups limit access via CIDR and we set public_access_cidrs to allow access to the CIDR list in
+  # var.security_groups_cidr_blocks
+  #tfsec:ignore:aws-eks-no-public-cluster-access tfsec:ignore:aws-eks-no-public-cluster-access-to-cidr
   vpc_config {
     endpoint_public_access  = true
-    endpoint_private_access = false
+    endpoint_private_access = true
+    public_access_cidrs     = var.security_groups_cidr_blocks
     subnet_ids              = var.subnets_private
   }
 
@@ -160,7 +171,7 @@ resource "aws_iam_role_policy" "eks_service_account" {
       {
         Action   = ["kms:GetPublicKey", "kms:TagResource", "kms:CreateAlias", "kms:CreateKey", "kms:Sign"]
         Effect   = "Allow"
-        Resource = "*"
+        Resource = aws_kms_key.smallstep.arn
       },
       {
         Action   = ["s3:PutObject"]

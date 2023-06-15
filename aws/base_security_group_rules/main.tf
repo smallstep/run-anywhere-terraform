@@ -1,39 +1,34 @@
 #----------------------------------------------------------------------------------
-# 
+#
 # This module creates some basic rules that should be present in every SG.
-# 
+#
 #----------------------------------------------------------------------------------
-# 
-#  If set to public-facing, we will allow ICMP traffic from everywhere. 
+#
+#  If set to public-facing, we will allow ICMP traffic from everywhere.
 #  If not, we will only allow ICMP from the CIDR block of our VPC
-# 
+#
 #----------------------------------------------------------------------------------
 
-data "aws_security_group" "selected" {
-  id = var.security_group_id
-}
 
 # To prevent possible mis-match between selected subnet and its VPC,
 # we just use this data source to pull that data.
 data "aws_vpc" "selected" {
-  id = data.aws_security_group.selected.vpc_id
+  id = var.vpc
 }
 
 locals {
-  icmp_cidr_block = var.public_facing == false ? data.aws_vpc.selected.cidr_block : "0.0.0.0/0"
+  cidr_blocks = concat(var.security_groups_cidr_blocks, [data.aws_vpc.selected.cidr_block])
 }
 
 # Allow all egress traffic
 resource "aws_security_group_rule" "egress" {
-  count = var.egress_all ? 1 : 0
-
   type              = "egress"
   from_port         = 0
   to_port           = 0
   protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
+  cidr_blocks       = local.cidr_blocks
   security_group_id = var.security_group_id
-  description       = "Allow egress everywhere."
+  description       = "Allow egress to internal VPC."
 
   lifecycle {
     create_before_destroy = true
@@ -47,7 +42,7 @@ resource "aws_security_group_rule" "ingress1" {
   from_port         = 0 # ICMP Type
   to_port           = 0 # ICMP Code
   protocol          = "icmp"
-  cidr_blocks       = [local.icmp_cidr_block]
+  cidr_blocks       = local.cidr_blocks
   security_group_id = var.security_group_id
   description       = "Base ICMP rule - managed by Terraform."
 
@@ -62,7 +57,7 @@ resource "aws_security_group_rule" "ingress2" {
   from_port         = 3 # ICMP Type
   to_port           = 4 # ICMP Code
   protocol          = "icmp"
-  cidr_blocks       = [local.icmp_cidr_block]
+  cidr_blocks       = local.cidr_blocks
   security_group_id = var.security_group_id
   description       = "Base ICMP rule - managed by Terraform."
 
@@ -77,7 +72,7 @@ resource "aws_security_group_rule" "ingress3" {
   from_port         = 8 # ICMP Type
   to_port           = 0 # ICMP Code
   protocol          = "icmp"
-  cidr_blocks       = [local.icmp_cidr_block]
+  cidr_blocks       = local.cidr_blocks
   security_group_id = var.security_group_id
   description       = "Base ICMP rule - managed by Terraform."
 
@@ -92,7 +87,7 @@ resource "aws_security_group_rule" "ingress4" {
   from_port         = 11 # ICMP Type
   to_port           = 0  # ICMP Code
   protocol          = "icmp"
-  cidr_blocks       = [local.icmp_cidr_block]
+  cidr_blocks       = local.cidr_blocks
   security_group_id = var.security_group_id
   description       = "Base ICMP rule - managed by Terraform."
 

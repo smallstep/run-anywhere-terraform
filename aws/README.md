@@ -1,9 +1,12 @@
 ## AWS
 
 #### Requirements
+
 [`step`](https://github.com/smallstep/cli)
 
 [`aws`](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+
+[`helm`](https://helm.sh/docs/helm/helm_install/)
 
 #### Secret management
 
@@ -17,7 +20,7 @@ Once the module has been set up, you should confirm each secret's value in the S
 
 After completion, Terraform will have stood up and configured an RDS Aurora PostgreSQL cluster (with lambda attached), an EKS cluster, a Redis instance, an Elastic IP (later used to create an NLB), DNS resources, and all secrets stored in SecretsManager. Additionally, it will have tagged all subnets involved to allow EKS to attach to the private subnets and our NLB to attach to the public subnets.
 
-#### Example module intantiation
+#### Example module instantiation
 
 ```terraform
 variable "private_issuer_password" {
@@ -44,15 +47,17 @@ variable "yubihsm_pin" {
 module "run_anywhere" {
   source = "github.com/smallstep/run-anywhere-terraform.git//aws?ref=v1.0.0"
 
-  base_domain             = "your_domain.com"
-  default_name            = "smallstep-prod"
-  private_issuer_password = var.private_issuer_password
-  region                  = "us-west-1"
-  smtp_password           = var.smtp_password
-  subnets_public          = ["subnet-abskd939", "subnet-283kdjjd9"]    
-  subnets_private         = ["subnet-d7ddd333b3", "subnet-abscd303"]    
-  yubihsm_enabled         = true
-  yubihsm_pin             = var.yubihsm_pin
+  base_domain                 = "your_domain.com"
+  default_name                = "smallstep-prod"
+  private_issuer_password     = var.private_issuer_password
+  region                      = "us-west-1"
+  smtp_password               = var.smtp_password
+  subnets_public              = ["subnet-abskd939", "subnet-283kdjjd9"]
+  subnets_private             = ["subnet-d7ddd333b3", "subnet-abscd303"]
+  vpc                         = "vpc-89d606ae"
+  security_groups_cidr_blocks = ["192.168.71.100/32"]
+  yubihsm_enabled             = true
+  yubihsm_pin                 = var.yubihsm_pin
 }
 ```
 
@@ -61,5 +66,8 @@ module "run_anywhere" {
 ```shell
 terraform init
 HISTCONTROL=ignorespace
-terraform apply -var private_issuer_password="${private_issuer_password}" -var smtp_password="${smtp_password}" -var yubihsm_pin="${yubihsm_pin}"
+PRIVATE_ISSUER_PASSWORD=supersecretpassword
+SMTP_PASSWORD=supersecretpasswordagain
+YUBIHSM_PIN=0x04d2abc
+terraform apply -var private_issuer_password="${PRIVATE_ISSUER_PASSWORD}" -var smtp_password="${SMTP_PASSWORD}" -var yubihsm_pin="${YUBIHSM_PIN}"
 ```
