@@ -41,8 +41,8 @@ resource "null_resource" "post_policy" {
      EOT
   }
 
-  depends_on = [aws_eks_cluster.eks, 
-                aws_iam_role_policy.load_balancer_role_policy,
-                null_resource.kube_config
-                ]
+  depends_on = [aws_eks_cluster.eks,
+    aws_iam_role_policy.load_balancer_role_policy,
+    null_resource.kube_config
+  ]
 }

@@ -1,14 +1,14 @@
-#-------------------------------------------------------------------------------------- 
-# 
+#--------------------------------------------------------------------------------------
+#
 # This file hosts all variable resources for the AWS Run Anywhere deployment.
-# 
+#
 #--------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------
-#                                !!! IMPORTANT !!!  
+#                                !!! IMPORTANT !!!
 # -------------------------------------------------------------------------------------
 # When running first apply set: terraform apply -var smtp_password="<value>" \
-#                                               -var private_issuer_password="<value>" 
-#                                               
+#                                               -var private_issuer_password="<value>"
+#
 #                                               (Optional)
 #                                               (if you set `yubihsm_enabled = true`) \
 #                                               -var yubihsm_pin="<value"
@@ -85,6 +85,7 @@ variable "k8s_pool_min" {
 
 variable "private_issuer_password" {
   description = "The private issuer password used by the create_secrets.sh script."
+  default     = ""
   type        = string
   sensitive   = true
 }
@@ -231,16 +232,22 @@ variable "region" {
   type        = string
 }
 
-variable "security_groups_public" {
-  default     = false
-  description = "Security groups for the module can be set to allow public ICMP connections for testing purposes."
-  type        = bool
+variable "security_groups_cidr_blocks" {
+  default     = []
+  description = "Security groups for the module can be set to allow ingress and egress traffic"
+  type        = list(string)
 }
 
 variable "smtp_password" {
   description = "The SMTP password used by the create_secrets.sh script."
+  default     = ""
   type        = string
   sensitive   = true
+}
+
+variable "vpc" {
+  description = "AWS vpc used by all project resources."
+  type        = string
 }
 
 variable "subnets_private" {

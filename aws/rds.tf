@@ -1,28 +1,20 @@
 #----------------------------------------------------------------------------------
-# 
+#
 # This file is where we set up Amazon all RDS databases and related resources
-# 
+#
 #----------------------------------------------------------------------------------
 # There are 10 PostgreSQL databases being set up. These are defined in locals.
 #----------------------------------------------------------------------------------
 
-data "archive_file" "make_dbs" {
-  type        = "zip"
-  output_path = "${path.module}/lambda.zip"
-  source_dir  = "${path.module}/lambda/"
-}
-
 locals {
   # list of all database names needed
   # will not need to change
-  db_names = ["landlord", "certificates", "web", "depot", "folk", "memoir", "majordomo", "moody", "courier", "veto", "approvalq"]
 
   cw_logging_value = var.rds_enable_cloudwatch_logging == true ? ["postgresql"] : [""]
 
   # All information needed to log into a database cluster
   # Will be stored in SecretsManager
   master_creds = {
-    db_names = local.db_names
     host     = aws_rds_cluster.smallstep.endpoint
     username = var.rds_master_username
     password = random_password.initial_master_password.result
@@ -66,12 +58,10 @@ locals {
 }
 
 # Set up the SG assigned to each db with a base set of recommended ICMP rules
-# If you want to test from the public internet, you can uncomment the `public_facing` line
-# Defaults to only allowing these rules internal to the VPC
 module "rds_base_security_group_rules" {
   source            = "./base_security_group_rules"
-  public_facing     = var.security_groups_public
   security_group_id = aws_security_group.rds.id
+  vpc               = var.vpc
 }
 
 resource "aws_db_parameter_group" "smallstep" {
@@ -88,102 +78,6 @@ resource "aws_db_parameter_group" "smallstep" {
       apply_method = lookup(parameter.value, "apply_method", null)
     }
   }
-}
-
-resource "aws_lambda_function" "make_dbs" {
-  filename                       = data.archive_file.make_dbs.output_path
-  function_name                  = "${var.default_name}-make-dbs"
-  role                           = aws_iam_role.make_dbs.arn
-  handler                        = "make_dbs.lambda_handler"
-  source_code_hash               = data.archive_file.make_dbs.output_base64sha256
-  runtime                        = "python3.8"
-  description                    = "Sets up the individual databases in the Aurora cluster - managed by TF do not modify"
-  timeout                        = 300
-  reserved_concurrent_executions = 1
-
-  vpc_config {
-    subnet_ids         = var.subnets_private
-    security_group_ids = [aws_security_group.rds.id]
-  }
-
-  environment {
-    variables = {
-      secret_id = aws_secretsmanager_secret.master_password.id
-    }
-  }
-
-  tags = {
-    Name        = "${var.default_name}-make-dbs"
-    Description = var.default_description
-  }
-
-  depends_on = [
-    aws_rds_cluster.smallstep
-  ]
-}
-
-resource "aws_iam_role" "make_dbs" {
-  name = "${var.default_name}-make-dbs"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-        Effect = "Allow"
-        Sid    = ""
-      }
-    ]
-  })
-
-  description = "Permissions for Lambda function Managed by Terraform do not modify"
-}
-
-# Since this Lambda will talk to the database cluster, we must launch it in a VPC.
-resource "aws_iam_role_policy_attachment" "make_dbs_1" {
-  role       = aws_iam_role.make_dbs.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-}
-
-# Grant the lambda rights to our KMS key that we use to encrypt secrets for the project
-resource "aws_iam_role_policy" "make_dbs_2" {
-  name = "${var.default_name}-kms-decrypt"
-  role = aws_iam_role.make_dbs.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "kms:Decrypt",
-        ]
-        Effect   = "Allow"
-        Resource = "${aws_kms_key.smallstep.arn}"
-      },
-    ]
-  })
-}
-
-# Grant the lambda rights to the SecretsManager secret used to store the cluster login info
-resource "aws_iam_role_policy" "make_dbs_3" {
-  name = "${var.default_name}-db-secret-access"
-  role = aws_iam_role.make_dbs.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "secretsmanager:GetSecretValue",
-        ]
-        Effect   = "Allow"
-        Resource = "${aws_secretsmanager_secret.master_password.arn}"
-      },
-    ]
-  })
 }
 
 # Create one Aurora cluster and create each of the 10 required databases using Lambda.
@@ -226,12 +120,14 @@ resource "aws_rds_cluster" "smallstep" {
 resource "aws_rds_cluster_instance" "smallstep" {
   count = var.rds_instance_count
 
-  identifier          = "${var.default_name}-${format("%02d", count.index + 1)}"
-  cluster_identifier  = aws_rds_cluster.smallstep.cluster_identifier
-  engine              = "aurora-postgresql"
-  instance_class      = var.rds_instance_class
-  publicly_accessible = false
-  apply_immediately   = true
+  identifier                      = "${var.default_name}-${format("%02d", count.index + 1)}"
+  cluster_identifier              = aws_rds_cluster.smallstep.cluster_identifier
+  engine                          = "aurora-postgresql"
+  instance_class                  = var.rds_instance_class
+  publicly_accessible             = false
+  apply_immediately               = true
+  performance_insights_enabled    = true
+  performance_insights_kms_key_id = aws_kms_key.smallstep.arn
 
   # Making the first db the preferred writer for QoL reasons
   promotion_tier = count.index
@@ -252,7 +148,7 @@ resource "aws_rds_cluster_instance" "smallstep" {
 # Security Group for the DBs
 resource "aws_security_group" "rds" {
   name        = "${var.default_name}-postgres-dbs"
-  vpc_id      = data.aws_subnet.public[0].vpc_id
+  vpc_id      = var.vpc
   description = var.default_description
 
   tags = {
@@ -295,15 +191,3 @@ resource "aws_security_group_rule" "rds_to_rds" {
   }
 }
 
-resource "null_resource" "make_dbs" {
-  provisioner "local-exec" {
-    command = "aws lambda invoke --function-name ${aws_lambda_function.make_dbs.arn} /dev/null"
-  }
-
-  depends_on = [
-    aws_rds_cluster.smallstep,
-    aws_rds_cluster_instance.smallstep,
-    aws_lambda_function.make_dbs,
-    aws_security_group.rds
-  ]
-}

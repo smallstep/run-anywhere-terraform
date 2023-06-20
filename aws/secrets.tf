@@ -1,7 +1,7 @@
-#------------------------------------------------------------------------------------- 
-# 
+#-------------------------------------------------------------------------------------
+#
 # This file is where we set up KMS Keys, SecretsManager secrets, and related resources
-# 
+#
 #-------------------------------------------------------------------------------------
 
 # Before we set up any other resources, we'll need to create a KMS key and use it to
@@ -9,7 +9,7 @@
 resource "aws_kms_key" "smallstep" {
   description         = "KMS key used for encrypting/decrypting secrets related to the Smallstep Integration"
   key_usage           = "ENCRYPT_DECRYPT"
-  enable_key_rotation = false
+  enable_key_rotation = true
 
   tags = {
     Name      = var.default_name

@@ -1,7 +1,7 @@
 #----------------------------------------------------------------------------------
-# 
+#
 # This file is where we set up Amazon ElastiCache for Redis and related resources
-# 
+#
 #----------------------------------------------------------------------------------
 
 locals {
@@ -26,8 +26,8 @@ locals {
 # Defaults to only allowing these rules internal to the VPC
 module "redis_base_security_group_rules" {
   source            = "./base_security_group_rules"
-  public_facing     = var.security_groups_public
   security_group_id = aws_security_group.redis.id
+  vpc               = var.vpc
 }
 
 # Creates a parameter group for the Redis cluster.
@@ -49,20 +49,21 @@ resource "aws_elasticache_parameter_group" "redis" {
 
 # Replication Group will create the underlying redis instances
 resource "aws_elasticache_replication_group" "redis" {
-  apply_immediately             = true
-  at_rest_encryption_enabled    = true
-  automatic_failover_enabled    = var.redis_cache_clusters > 1 ? true : false
-  auto_minor_version_upgrade    = true
-  engine                        = "redis"
-  engine_version                = var.redis_engine_version
-  node_type                     = var.redis_node_type
-  number_cache_clusters         = var.redis_cache_clusters
-  parameter_group_name          = aws_elasticache_parameter_group.redis.id
-  port                          = var.redis_port
-  replication_group_description = var.default_description
-  replication_group_id          = var.default_name
-  subnet_group_name             = aws_elasticache_subnet_group.redis.name
-  security_group_ids            = [aws_security_group.redis.id]
+  apply_immediately          = true
+  at_rest_encryption_enabled = true
+  transit_encryption_enabled = true
+  automatic_failover_enabled = var.redis_cache_clusters > 1 ? true : false
+  auto_minor_version_upgrade = true
+  engine                     = "redis"
+  engine_version             = var.redis_engine_version
+  node_type                  = var.redis_node_type
+  num_cache_clusters         = var.redis_cache_clusters
+  parameter_group_name       = aws_elasticache_parameter_group.redis.id
+  port                       = var.redis_port
+  description                = var.default_description
+  replication_group_id       = var.default_name
+  subnet_group_name          = aws_elasticache_subnet_group.redis.name
+  security_group_ids         = [aws_security_group.redis.id]
 
   tags = {
     Name      = var.default_name
@@ -77,7 +78,7 @@ resource "aws_elasticache_subnet_group" "redis" {
 
 resource "aws_security_group" "redis" {
   name        = "${var.default_name}-redis"
-  vpc_id      = data.aws_subnet.public[0].vpc_id
+  vpc_id      = var.vpc
   description = var.default_description
 
   lifecycle {
