@@ -22,7 +22,7 @@ Our recommendation is creating high-level variables with a default value of an e
 
 You may instead pass in these values directly to the module block, but the above method will prevent these secrets from being written to your source control. All related resources are configured to ignore changes, so it won't matter that these values will not be passed in for subsequent Terraform applies.
 
-Landlord uses [AAD Pod Identity](https://github.com/Azure/aad-pod-identity) to assume the identity of the node when accessing Key Vault.
+Both Landlord and Veto microservices require [AAD Workload Identity]([https://github.com/Azure/aad-pod-identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster)) to assume the identity of the node when accessing Key Vault.
 
 ## Example Module Instantiation
 
