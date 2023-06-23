@@ -1,3 +1,8 @@
+resource "azurerm_user_assigned_identity" "smallstep" {
+  location            = azurerm_resource_group.smallstep.location
+  name                = "smallstep"
+  resource_group_name = azurerm_resource_group.smallstep.name
+}
 
 resource "azurerm_kubernetes_cluster" "primary" {
   name                      = var.k8s_cluster_name
@@ -5,6 +10,8 @@ resource "azurerm_kubernetes_cluster" "primary" {
   resource_group_name       = azurerm_resource_group.smallstep.name
   automatic_channel_upgrade = "stable"
   dns_prefix                = var.k8s_cluster_name
+  oidc_issuer_enabled       = true
+  workload_identity_enabled = true
 
   default_node_pool {
     name            = "default"
@@ -29,20 +36,6 @@ resource "azurerm_kubernetes_cluster" "primary" {
   }
 }
 
-resource "azurerm_role_assignment" "agentpool_msi" {
-  scope                            = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${azurerm_kubernetes_cluster.primary.node_resource_group}"
-  role_definition_name             = "Managed Identity Operator"
-  principal_id                     = azurerm_kubernetes_cluster.primary.kubelet_identity[0].object_id
-  skip_service_principal_aad_check = true
-}
-
-resource "azurerm_role_assignment" "agentpool_vm" {
-  scope                            = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${azurerm_kubernetes_cluster.primary.node_resource_group}"
-  role_definition_name             = "Virtual Machine Contributor"
-  principal_id                     = azurerm_kubernetes_cluster.primary.kubelet_identity[0].object_id
-  skip_service_principal_aad_check = true
-}
-
 resource "azurerm_role_assignment" "agentpool_networking" {
   scope                            = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourcegroups/${azurerm_resource_group.smallstep.name}"
   role_definition_name             = "Network Contributor"
@@ -50,46 +43,32 @@ resource "azurerm_role_assignment" "agentpool_networking" {
   skip_service_principal_aad_check = true
 }
 
-# helm chart for the aad pod identity
-resource "helm_release" "aad_pod_identity" {
-  name       = "aad-pod-identity"
-  repository = "https://raw.githubusercontent.com/Azure/aad-pod-identity/master/charts"
-  chart      = "aad-pod-identity"
-  namespace  = "kube-system"
-  version    = "4.1.10"
+resource "azurerm_role_assignment" "smallstep_crypto_officer" {
+  scope                = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourcegroups/${azurerm_resource_group.smallstep.name}"
+  role_definition_name = "Key Vault Crypto Officer"
+  principal_id         = azurerm_user_assigned_identity.smallstep.principal_id
 }
 
-resource "kubernetes_manifest" "azure_identity" {
-  depends_on = [helm_release.aad_pod_identity]
-  manifest = {
-    "apiVersion" = "aadpodidentity.k8s.io/v1"
-    "kind"       = "AzureIdentity"
-    "metadata" = {
-      "name" : "landlord"
-      "namespace" : "smallstep"
-    }
-    "spec" = {
-      "clientID"   = "${azurerm_kubernetes_cluster.primary.kubelet_identity[0].client_id}"
-      "resourceID" = "/subscriptions/f0ef333d-357c-45f7-afba-a8f66b952022/resourcegroups/MC_onprem_smallstep_centralus/providers/Microsoft.ManagedIdentity/userAssignedIdentities/smallstep-agentpool"
-    }
-  }
+resource "azurerm_role_assignment" "smallstep_storage_blob_data_contributor" {
+  scope                = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourcegroups/${azurerm_resource_group.smallstep.name}"
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = azurerm_user_assigned_identity.smallstep.principal_id
 }
 
-resource "kubernetes_manifest" "azure_identity_binding" {
-  depends_on = [helm_release.aad_pod_identity]
+resource "azurerm_federated_identity_credential" "smallstep-landlord" {
+  name                = "smallstep-landlord"
+  resource_group_name = azurerm_resource_group.smallstep.name
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:landlord"
+}
 
-  manifest = {
-    "apiVersion" = "aadpodidentity.k8s.io/v1"
-    "kind"       = "AzureIdentityBinding"
-
-    "metadata" = {
-      "name"      = "landlord"
-      "namespace" = "smallstep"
-    }
-
-    "spec" = {
-      "azureIdentity" = "landlord"
-      "selector"      = "landlord"
-    }
-  }
+resource "azurerm_federated_identity_credential" "smallstep-veto" {
+  name                = "smallstep-veto"
+  resource_group_name = azurerm_resource_group.smallstep.name
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:veto-acc"
 }
