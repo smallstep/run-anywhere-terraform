@@ -22,7 +22,7 @@ Our recommendation is creating high-level variables with a default value of an e
 
 You may instead pass in these values directly to the module block, but the above method will prevent these secrets from being written to your source control. All related resources are configured to ignore changes, so it won't matter that these values will not be passed in for subsequent Terraform applies.
 
-Both Landlord and Veto microservices require [AAD Workload Identity]([https://github.com/Azure/aad-pod-identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster)) to assume the identity of the node when accessing Key Vault.
+Landlord and Veto microservices use [Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview) for accessing Key Vault and Blob Storage, respectively.
 
 ## Example Module Instantiation
 
@@ -86,13 +86,6 @@ HISTCONTROL=ignorespace
 
 terraform apply -var private_issuer_password="${private_issuer_password}" -var smtp_password="${smtp_password}" -var yubihsm_pin="${yubihsm_auth_id}${yubihsm_pin}"
 ```
-
-## Notes
-
-Even though the AzureIdentity and AzureIdentityBinding configs have a dependency on the AAD Pod Identity Helm chart, terraform was unable to create those resources because the CRD had not been applied. I had to run `terraform apply -target module.run_anywhere.helm_release.aad_pod_identity` before the aadpodidentity.k8s.io resources could be created.
-
-
-I had to `terraform import module.run_anywhere.kubernetes_config_map_v1.coredns_custom kube-system/coredns-custom` because AKS automatically ensures it exists.
 
 ## TODO
 

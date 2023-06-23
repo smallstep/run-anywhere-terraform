@@ -1,3 +1,8 @@
+resource "azurerm_user_assigned_identity" "smallstep" {
+  location            = azurerm_resource_group.smallstep.location
+  name                = "smallstep"
+  resource_group_name = azurerm_resource_group.smallstep.name
+}
 
 resource "azurerm_kubernetes_cluster" "primary" {
   name                      = var.k8s_cluster_name
@@ -38,10 +43,16 @@ resource "azurerm_role_assignment" "agentpool_networking" {
   skip_service_principal_aad_check = true
 }
 
-resource "azurerm_user_assigned_identity" "smallstep" {
-  location            = azurerm_resource_group.smallstep.location
-  name                = "smallstep"
-  resource_group_name = azurerm_resource_group.smallstep.name
+resource "azurerm_role_assignment" "smallstep_crypto_officer" {
+  scope                = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourcegroups/${azurerm_resource_group.smallstep.name}"
+  role_definition_name = "Key Vault Crypto Officer"
+  principal_id         = azurerm_user_assigned_identity.smallstep.principal_id
+}
+
+resource "azurerm_role_assignment" "smallstep_storage_blob_data_contributor" {
+  scope                = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourcegroups/${azurerm_resource_group.smallstep.name}"
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = azurerm_user_assigned_identity.smallstep.principal_id
 }
 
 resource "azurerm_federated_identity_credential" "smallstep-landlord" {
