@@ -64,3 +64,7 @@ output "route53_scim_domain" {
 output "route53_zone" {
   value = aws_route53_zone.cluster.name
 }
+
+output "gateway_jwt_signing_key" {
+  value = aws_kms_key.gateway_jwt_signing_key.key_id
+}

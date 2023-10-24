@@ -27,3 +27,8 @@ output "azure_storage_key" {
   value     = azurerm_storage_account.default.primary_access_key
   sensitive = true
 }
+
+output "gateway_jwt_signing_key" {
+  # TODO might be resource_id
+  value = azurerm_key_vault_key.gateway_jwt_signing_key.id
+}
