@@ -233,3 +233,111 @@ resource "google_project_iam_member" "approvalq_cloudsql_client" {
 resource "google_service_account_key" "approvalq" {
   service_account_id = google_service_account.approvalq.name
 }
+
+resource "google_service_account" "inventory" {
+  project      = var.project_id
+  account_id   = "inventory"
+  display_name = "inventory"
+}
+
+resource "google_service_account_iam_binding" "inventory_workload_identity" {
+  service_account_id = google_service_account.inventory.name
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/inventory]",
+  ]
+  depends_on = [google_container_cluster.primary]
+}
+
+resource "google_service_account" "missioncontrol" {
+  project      = var.project_id
+  account_id   = "mission-control"
+  display_name = "mission-control"
+}
+
+resource "google_service_account_iam_binding" "missioncontrol_workload_identity" {
+  service_account_id = google_service_account.inventory.name
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/mission-control]",
+  ]
+  depends_on = [google_container_cluster.primary]
+}
+
+resource "google_service_account" "guardian" {
+  project      = var.project_id
+  account_id   = "guardian"
+  display_name = "guardian"
+}
+
+resource "google_service_account_iam_binding" "guardian_workload_identity" {
+  service_account_id = google_service_account.inventory.name
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/guardian]",
+  ]
+  depends_on = [google_container_cluster.primary]
+}
+
+resource "google_project_iam_member" "guardian_kms_admin" {
+  project = var.project_id
+  role    = "roles/cloudkms.admin"
+  member  = "serviceAccount:${google_service_account.guardian.email}"
+}
+
+resource "google_project_iam_member" "guardian_kms_pubkey_viewer" {
+  project = var.project_id
+  role    = "roles/cloudkms.publicKeyViewer"
+  member  = "serviceAccount:${google_service_account.guardian.email}"
+}
+
+resource "google_project_iam_member" "guardian_kms_signer" {
+  project = var.project_id
+  role    = "roles/cloudkms.signer"
+  member  = "serviceAccount:${google_service_account.guardian.email}"
+}
+
+resource "google_project_iam_member" "guardian_kms_verifier" {
+  project = var.project_id
+  role    = "roles/cloudkms.signerVerifier"
+  member  = "serviceAccount:${google_service_account.guardian.email}"
+}
+
+resource "google_service_account" "gateway" {
+  project      = var.project_id
+  account_id   = "gateway"
+  display_name = "gateway"
+}
+
+resource "google_service_account_iam_binding" "gateway_workload_identity" {
+  service_account_id = google_service_account.inventory.name
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/gateway]",
+  ]
+  depends_on = [google_container_cluster.primary]
+}
+
+resource "google_project_iam_member" "gateway_kms_admin" {
+  project = var.project_id
+  role    = "roles/cloudkms.admin"
+  member  = "serviceAccount:${google_service_account.gateway.email}"
+}
+
+resource "google_project_iam_member" "gateway_kms_pubkey_viewer" {
+  project = var.project_id
+  role    = "roles/cloudkms.publicKeyViewer"
+  member  = "serviceAccount:${google_service_account.gateway.email}"
+}
+
+resource "google_project_iam_member" "gateway_kms_signer" {
+  project = var.project_id
+  role    = "roles/cloudkms.signer"
+  member  = "serviceAccount:${google_service_account.gateway.email}"
+}
+
+resource "google_project_iam_member" "gateway_kms_verifier" {
+  project = var.project_id
+  role    = "roles/cloudkms.signerVerifier"
+  member  = "serviceAccount:${google_service_account.gateway.email}"
+}

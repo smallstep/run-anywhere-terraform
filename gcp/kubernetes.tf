@@ -14,6 +14,11 @@ data "google_kms_secret" "majordomo_provisioner_password" {
   ciphertext = filebase64("${var.path_to_secrets}/majordomo-provisioner-password_password.enc")
 }
 
+data "google_kms_secret" "missioncontrol_provisioner_password" {
+  crypto_key = data.google_kms_crypto_key.terraform_secret.id
+  ciphertext = filebase64("${var.path_to_secrets}/missioncontrol-provisioner-password_password.enc")
+}
+
 data "google_kms_secret" "oidc_jwks" {
   crypto_key = data.google_kms_crypto_key.terraform_secret.id
   ciphertext = filebase64("${var.path_to_secrets}/oidc_jwks.enc")
@@ -86,6 +91,17 @@ resource "kubernetes_secret" "majordomo-provisioner-password" {
   }
   data = {
     password = data.google_kms_secret.majordomo_provisioner_password.plaintext
+  }
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+}
+
+resource "kubernetes_secret" "missioncontrol-provisioner-password" {
+  metadata {
+    name      = "missioncontrol-provisioner-password"
+    namespace = var.namespace
+  }
+  data = {
+    password = data.google_kms_secret.missioncontrol_provisioner_password.plaintext
   }
   depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }

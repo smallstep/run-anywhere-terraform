@@ -24,6 +24,10 @@ locals {
     google_sql_database.moody.name,
     google_sql_database.veto.name,
     google_sql_database.approvalq.name,
+    google_sql_database.inventory.name,
+    google_sql_database.guardian.name,
+    google_sql_database.mission_control.name,
+    google_sql_database.gateway.name,
   ])
 }
 
@@ -133,6 +137,30 @@ resource "google_sql_database" "veto" {
 resource "google_sql_database" "approvalq" {
   project  = var.project_id
   name     = "approvalq"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "inventory" {
+  project  = var.project_id
+  name     = "inventory"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "guardian" {
+  project  = var.project_id
+  name     = "guardian"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "mission_control" {
+  project  = var.project_id
+  name     = "mission_control"
+  instance = google_sql_database_instance.master.name
+}
+
+resource "google_sql_database" "gateway" {
+  project  = google_project.main.project_id
+  name     = "gateway"
   instance = google_sql_database_instance.master.name
 }
 

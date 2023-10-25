@@ -137,3 +137,30 @@ resource "google_dns_record_set" "inventory" {
   managed_zone = google_dns_managed_zone.default.name
   rrdatas      = [google_compute_address.smallstep_address.address]
 }
+
+resource "google_dns_record_set" "gateway" {
+  project      = var.project_id
+  name         = "gateway.${google_dns_managed_zone.default.dns_name}"
+  ttl          = 300
+  type         = "A"
+  managed_zone = google_dns_managed_zone.default.name
+  rrdatas      = [google_compute_address.smallstep_address.address]
+}
+
+resource "google_dns_record_set" "guardian" {
+  project      = var.project_id
+  name         = "att.${google_dns_managed_zone.default.dns_name}"
+  ttl          = 300
+  type         = "A"
+  managed_zone = google_dns_managed_zone.default.name
+  rrdatas      = [google_compute_address.smallstep_address.address]
+}
+
+resource "google_dns_record_set" "mission_control" {
+  project      = var.project_id
+  name         = "control.infra.${google_dns_managed_zone.default.dns_name}"
+  ttl          = 300
+  type         = "A"
+  managed_zone = google_dns_managed_zone.default.name
+  rrdatas      = [google_compute_address.smallstep_address.address]
+}

@@ -64,6 +64,7 @@ mkdir -p secrets
 create_terraform_secret postgresql_password <(generate_secret)
 create_terraform_secret auth_secret <(generate_secret)
 create_terraform_secret majordomo-provisioner-password_password <(generate_secret)
+create_terraform_secret missioncontrol-provisioner-password_password <(generate_secret)
 create_terraform_secret oidc_jwks <(generate_oidc_jwks)
 create_terraform_secret smtp_password <(echo -n $smtp_password)
 create_terraform_secret private-issuer_password <(echo -n $private_issuer_password)

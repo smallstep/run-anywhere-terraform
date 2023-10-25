@@ -95,3 +95,7 @@ output "sql_db_web_user" {
 output "sql_db_names" {
   value = local.db_names
 }
+
+output "gateway_jwt_signing_key" {
+  value = google_kms_crypto_key.gateway_jwt_signing_key.id
+}
