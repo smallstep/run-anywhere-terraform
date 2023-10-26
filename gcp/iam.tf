@@ -264,6 +264,13 @@ resource "google_service_account_iam_binding" "missioncontrol_workload_identity"
   depends_on = [google_container_cluster.primary]
 }
 
+// Mission control verifies tokens issued by Gateway API
+resource "google_project_iam_member" "mission_control_kms_pubkey_viewer" {
+  project = var.project_id
+  role    = "roles/cloudkms.publicKeyViewer"
+  member  = "serviceAccount:${google_service_account.missioncontrol.email}"
+}
+
 resource "google_service_account" "guardian" {
   project      = var.project_id
   account_id   = "guardian"
