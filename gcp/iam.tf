@@ -318,18 +318,6 @@ resource "google_service_account_iam_binding" "gateway_workload_identity" {
   depends_on = [google_container_cluster.primary]
 }
 
-resource "google_project_iam_member" "gateway_kms_admin" {
-  project = var.project_id
-  role    = "roles/cloudkms.admin"
-  member  = "serviceAccount:${google_service_account.gateway.email}"
-}
-
-resource "google_project_iam_member" "gateway_kms_pubkey_viewer" {
-  project = var.project_id
-  role    = "roles/cloudkms.publicKeyViewer"
-  member  = "serviceAccount:${google_service_account.gateway.email}"
-}
-
 resource "google_project_iam_member" "gateway_kms_signer" {
   project = var.project_id
   role    = "roles/cloudkms.signer"
