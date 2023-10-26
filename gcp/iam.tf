@@ -256,7 +256,7 @@ resource "google_service_account" "missioncontrol" {
 }
 
 resource "google_service_account_iam_binding" "missioncontrol_workload_identity" {
-  service_account_id = google_service_account.inventory.name
+  service_account_id = google_service_account.missioncontrol.name
   role               = "roles/iam.workloadIdentityUser"
   members = [
     "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/mission-control]",
@@ -271,7 +271,7 @@ resource "google_service_account" "guardian" {
 }
 
 resource "google_service_account_iam_binding" "guardian_workload_identity" {
-  service_account_id = google_service_account.inventory.name
+  service_account_id = google_service_account.guardian.name
   role               = "roles/iam.workloadIdentityUser"
   members = [
     "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/guardian]",
@@ -310,7 +310,7 @@ resource "google_service_account" "gateway" {
 }
 
 resource "google_service_account_iam_binding" "gateway_workload_identity" {
-  service_account_id = google_service_account.inventory.name
+  service_account_id = google_service_account.gateway.name
   role               = "roles/iam.workloadIdentityUser"
   members = [
     "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/gateway]",
