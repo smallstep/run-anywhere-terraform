@@ -159,7 +159,7 @@ resource "google_sql_database" "mission_control" {
 }
 
 resource "google_sql_database" "gateway" {
-  project  = google_project.main.project_id
+  project  = var.project_id
   name     = "gateway"
   instance = google_sql_database_instance.master.name
 }
