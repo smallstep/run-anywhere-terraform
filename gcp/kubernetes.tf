@@ -73,6 +73,17 @@ resource "kubernetes_secret" "postgresql" {
   depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
 }
 
+resource "kubernetes_secret" "postgresql-landlordcachesrv" {
+  metadata {
+    name      = "postgresql-landlordcachesrv"
+    namespace = var.namespace
+  }
+  data = {
+    password = data.google_kms_secret.postgresql_cas_replication_user_password.plaintext
+  }
+  depends_on = [google_container_cluster.primary, kubernetes_namespace.install_namespace]
+}
+
 resource "kubernetes_secret" "auth" {
   metadata {
     name      = "auth"

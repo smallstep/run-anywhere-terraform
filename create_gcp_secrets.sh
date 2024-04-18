@@ -6,6 +6,7 @@ set -e
 # define key names for each secret
 declare -A SECRETS
 SECRETS[postgresql]=password
+SECRETS[postgresql_cas_replication_user]=password
 SECRETS[auth]=secret
 SECRETS[majordomo-provisioner-password]=password
 SECRETS[oidc]=jwks
@@ -62,6 +63,7 @@ mkdir -p secrets
 
 # create encrypted terraform secrets
 create_terraform_secret postgresql_password <(generate_secret)
+create_terraform_secret postgresql_cas_replication_user_password <(generate_secret)
 create_terraform_secret auth_secret <(generate_secret)
 create_terraform_secret majordomo-provisioner-password_password <(generate_secret)
 create_terraform_secret missioncontrol-provisioner-password_password <(generate_secret)
