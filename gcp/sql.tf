@@ -207,6 +207,7 @@ resource "null_resource" "sql_db_landlord_replication_log_user" {
     // script runs as the postgres user, but destroy target can't access variables outside of the resource,
     // so we pass this to the script and manually decrypt it.
     PGPASSWORD_ciphertext = data.google_kms_secret.postgresql_password.ciphertext
+    project = var.project_id
     db_instance           = google_sql_database_instance.master.id
     db_connection_name    = google_sql_database_instance.master.connection_name
     user                  = "landlordcachesrv"
@@ -224,7 +225,7 @@ resource "null_resource" "sql_db_landlord_replication_log_user" {
     command = "./sql/manage_user.sh"
     environment = {
       ACTION    = "create"
-      PROJECT   = var.project_id
+      PROJECT   = self.triggers.project
       KUBE_CTX  = self.triggers.kube_ctx
       // sql script runs as the postgres user, psql looks for a password in $PGPASSWORD
       PGPASSWORD      = google_sql_user.postgres.password
@@ -242,7 +243,7 @@ resource "null_resource" "sql_db_landlord_replication_log_user" {
     command = "./sql/manage_user.sh"
     environment = {
       ACTION    = "destroy"
-      PROJECT   = var.project_id
+      PROJECT   = self.triggers.project
       KUBE_CTX  = self.triggers.kube_ctx
       // sql script runs as the postgres user, ciphertext is passed to script which attempts to decrypt and set PGPASSWORD.
       // terraform does not allow accessing variables outside of the resource for destroy provisioners
