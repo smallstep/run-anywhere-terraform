@@ -217,7 +217,7 @@ resource "null_resource" "sql_db_landlord_replication_log_user" {
     user_grants           = file("./sql/create_replication_log_user.sql")
     kube_ctx              = local.kube_ctx
     db_names              = join(" ", [
-      google_sql_database.database["landlord"].name,
+      google_sql_database.landlord.name,
     ])
   }
 
