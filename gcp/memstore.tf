@@ -6,7 +6,7 @@
 
 resource "google_redis_instance" "smallstep" {
   project            = var.project_id
-  depends_on         = [google_project_service.redis]
+  depends_on         = [google_project_service.redis, google_project_service.servicenetworking]
   region             = var.region
   redis_version      = var.redis_version
   tier               = var.redis_tier
