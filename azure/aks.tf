@@ -72,3 +72,12 @@ resource "azurerm_federated_identity_credential" "smallstep-veto" {
   parent_id           = azurerm_user_assigned_identity.smallstep.id
   subject             = "system:serviceaccount:${var.namespace}:veto-acc"
 }
+
+resource "azurerm_federated_identity_credential" "smallstep-scepsvc" {
+  name                = "smallstep-scepsvc"
+  resource_group_name = azurerm_resource_group.smallstep.name
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:scepsvc"
+}

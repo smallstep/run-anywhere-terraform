@@ -310,6 +310,21 @@ resource "google_project_iam_member" "guardian_kms_verifier" {
   member  = "serviceAccount:${google_service_account.guardian.email}"
 }
 
+resource "google_service_account" "scepsvc" {
+  project      = var.project_id
+  account_id   = "scepsvc"
+  display_name = "scepsvc"
+}
+
+resource "google_service_account_iam_binding" "scepsvc_workload_identity" {
+  service_account_id = google_service_account.scepsvc.name
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/scepsvc]",
+  ]
+  depends_on = [google_container_cluster.primary]
+}
+
 resource "google_service_account" "gateway" {
   project      = var.project_id
   account_id   = "gateway"
