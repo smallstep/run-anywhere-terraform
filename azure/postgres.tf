@@ -13,31 +13,31 @@ resource "azurerm_key_vault_secret" "postgres" {
   key_vault_id = azurerm_key_vault.secrets.id
 }
 
-resource "azurerm_postgresql_server" "postgres" {
+resource "azurerm_postgresql_flexible_server" "postgres" {
   name                = "smallstep"
   resource_group_name = azurerm_resource_group.smallstep.name
   location            = azurerm_resource_group.smallstep.location
 
-  administrator_login          = "postgres"
-  administrator_login_password = azurerm_key_vault_secret.postgres.value
+  administrator_login    = "postgres"
+  administrator_password = azurerm_key_vault_secret.postgres.value
 
-  sku_name   = "GP_Gen5_2"
-  storage_mb = 5120
-  version    = "11"
+  sku_name = "GP_Standard_D2s_v3"
+  version  = "15"
 
-  auto_grow_enabled            = true
+  storage_mb                   = 32768
   backup_retention_days        = 7
   geo_redundant_backup_enabled = false
-  # TODO use private endpoint
-  public_network_access_enabled    = true
-  ssl_enforcement_enabled          = true
-  ssl_minimal_tls_version_enforced = "TLS1_2"
+  # TODO use private endpoint with delegated subnet
+  public_network_access_enabled = true
+
+  lifecycle {
+    ignore_changes = [zone]
+  }
 }
 
-resource "azurerm_postgresql_firewall_rule" "azure_only" {
-  name                = "azure"
-  resource_group_name = azurerm_resource_group.smallstep.name
-  server_name         = azurerm_postgresql_server.postgres.name
+resource "azurerm_postgresql_flexible_server_firewall_rule" "azure_only" {
+  name             = "azure"
+  server_id        = azurerm_postgresql_flexible_server.postgres.id
   # 0.0.0.0/32 allows access to all Azure services
   start_ip_address = "0.0.0.0"
   end_ip_address   = "0.0.0.0"

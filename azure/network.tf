@@ -17,6 +17,5 @@ resource "azurerm_subnet" "default" {
   virtual_network_name = azurerm_virtual_network.default.name
   address_prefixes     = ["10.2.1.0/24"]
 
-  enforce_private_link_endpoint_network_policies = false
+  private_endpoint_network_policies = "Disabled"
 }
-

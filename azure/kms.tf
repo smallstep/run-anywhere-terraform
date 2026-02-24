@@ -13,5 +13,5 @@ resource "azurerm_key_vault" "kms" {
   soft_delete_retention_days  = 7
   purge_protection_enabled    = false
   sku_name                    = "standard"
-  enable_rbac_authorization   = true
+  rbac_authorization_enabled  = true
 }

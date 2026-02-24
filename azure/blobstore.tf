@@ -9,7 +9,7 @@ resource "azurerm_storage_account" "default" {
   location                  = azurerm_resource_group.smallstep.location
   account_tier              = "Standard"
   account_replication_type  = "LRS"
-  enable_https_traffic_only = false
+  https_traffic_only_enabled = false
 
   depends_on = [azurerm_dns_cname_record.crl]
 

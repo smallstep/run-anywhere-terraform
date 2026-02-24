@@ -1,10 +1,9 @@
-
 output "name_servers" {
   value = azurerm_dns_zone.default.name_servers
 }
 
 output "postgres_host" {
-  value = azurerm_postgresql_server.postgres.fqdn
+  value = azurerm_postgresql_flexible_server.postgres.fqdn
 }
 
 output "kms_vault" {

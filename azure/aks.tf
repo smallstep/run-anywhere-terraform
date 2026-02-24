@@ -8,7 +8,7 @@ resource "azurerm_kubernetes_cluster" "primary" {
   name                      = var.k8s_cluster_name
   location                  = azurerm_resource_group.smallstep.location
   resource_group_name       = azurerm_resource_group.smallstep.name
-  automatic_channel_upgrade = "stable"
+  automatic_upgrade_channel = "stable"
   dns_prefix                = var.k8s_cluster_name
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
@@ -57,7 +57,6 @@ resource "azurerm_role_assignment" "smallstep_storage_blob_data_contributor" {
 
 resource "azurerm_federated_identity_credential" "smallstep-landlord" {
   name                = "smallstep-landlord"
-  resource_group_name = azurerm_resource_group.smallstep.name
   audience            = ["api://AzureADTokenExchange"]
   issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
   parent_id           = azurerm_user_assigned_identity.smallstep.id
@@ -66,7 +65,6 @@ resource "azurerm_federated_identity_credential" "smallstep-landlord" {
 
 resource "azurerm_federated_identity_credential" "smallstep-veto" {
   name                = "smallstep-veto"
-  resource_group_name = azurerm_resource_group.smallstep.name
   audience            = ["api://AzureADTokenExchange"]
   issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
   parent_id           = azurerm_user_assigned_identity.smallstep.id
