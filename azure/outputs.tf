@@ -26,3 +26,11 @@ output "azure_storage_key" {
   value     = azurerm_storage_account.default.primary_access_key
   sensitive = true
 }
+
+output "gateway_jwt_signing_key" {
+  value = "azurekms:name=${azurerm_key_vault_key.gateway_jwt.name};vault=${azurerm_key_vault.kms.name}"
+}
+
+output "gateway_jwt_signing_pubkey" {
+  value = base64encode(azurerm_key_vault_key.gateway_jwt.public_key_pem)
+}

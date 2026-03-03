@@ -70,3 +70,27 @@ resource "azurerm_federated_identity_credential" "smallstep-veto" {
   parent_id           = azurerm_user_assigned_identity.smallstep.id
   subject             = "system:serviceaccount:${var.namespace}:veto-acc"
 }
+
+resource "azurerm_federated_identity_credential" "smallstep-gateway" {
+  name                = "smallstep-gateway"
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:gateway"
+}
+
+resource "azurerm_federated_identity_credential" "smallstep-guardian" {
+  name                = "smallstep-guardian"
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:guardian"
+}
+
+resource "azurerm_federated_identity_credential" "smallstep-mission-control" {
+  name                = "smallstep-mission-control"
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:mission-control"
+}

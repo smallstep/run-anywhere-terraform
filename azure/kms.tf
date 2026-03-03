@@ -15,3 +15,11 @@ resource "azurerm_key_vault" "kms" {
   sku_name                    = "standard"
   rbac_authorization_enabled  = true
 }
+
+resource "azurerm_key_vault_key" "gateway_jwt" {
+  name         = "gateway-jwt-signing-key"
+  key_vault_id = azurerm_key_vault.kms.id
+  key_type     = "EC"
+  curve        = "P-256"
+  key_opts     = ["sign", "verify"]
+}
