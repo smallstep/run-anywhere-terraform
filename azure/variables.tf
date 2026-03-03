@@ -56,3 +56,9 @@ variable "yubihsm_enabled" {
   description = "Yubi HSM enabled"
   type        = bool
 }
+
+variable "node_count" {
+  default     = 5
+  description = "Number of nodes in the default AKS node pool."
+  type        = number
+}
