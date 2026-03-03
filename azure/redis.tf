@@ -28,6 +28,17 @@ resource "azurerm_private_endpoint" "redis" {
   }
 }
 
+resource "kubernetes_secret" "redis_auth" {
+  metadata {
+    name      = "redis-auth"
+    namespace = var.namespace
+  }
+
+  data = {
+    password = azurerm_redis_cache.smallstep.primary_access_key
+  }
+}
+
 # TODO use private DNS since the IP of the private endpoint can change
 resource "kubernetes_config_map_v1" "coredns_custom" {
   metadata {
