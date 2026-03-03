@@ -184,6 +184,29 @@ resource "kubernetes_secret" "majordomo_provisioner_password" {
   }
 }
 
+# Randomly generated password for mission-control
+resource "random_password" "missioncontrol_provisioner_password" {
+  length  = 32
+  special = false
+}
+
+resource "azurerm_key_vault_secret" "missioncontrol_provisioner_password" {
+  name         = "missioncontrol-provisioner-password"
+  key_vault_id = azurerm_key_vault.secrets.id
+  value        = random_password.missioncontrol_provisioner_password.result
+}
+
+resource "kubernetes_secret" "missioncontrol_provisioner_password" {
+  metadata {
+    name      = "missioncontrol-provisioner-password"
+    namespace = var.namespace
+  }
+
+  data = {
+    password = azurerm_key_vault_secret.missioncontrol_provisioner_password.value
+  }
+}
+
 # TODO
 resource "kubernetes_secret" "scim-server-credentials" {
   metadata {
