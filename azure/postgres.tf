@@ -46,5 +46,5 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "azure_only" {
 resource "azurerm_postgresql_flexible_server_configuration" "azure_extensions" {
   name      = "azure.extensions"
   server_id = azurerm_postgresql_flexible_server.postgres.id
-  value     = "PGCRYPTO,UUID-OSSP,BTREE_GIN"
+  value     = "PGCRYPTO,UUID-OSSP,BTREE_GIN,HSTORE"
 }
