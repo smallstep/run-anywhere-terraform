@@ -94,3 +94,11 @@ resource "azurerm_federated_identity_credential" "smallstep-mission-control" {
   parent_id           = azurerm_user_assigned_identity.smallstep.id
   subject             = "system:serviceaccount:${var.namespace}:mission-control"
 }
+
+resource "azurerm_federated_identity_credential" "smallstep-majordomo" {
+  name                = "smallstep-majordomo"
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:majordomo"
+}
