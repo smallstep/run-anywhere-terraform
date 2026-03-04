@@ -22,6 +22,13 @@ resource "azurerm_role_assignment" "terraform_kms_crypto_officer" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
+resource "azurerm_role_assignment" "smallstep_kms_crypto_officer" {
+  scope                = azurerm_key_vault.kms.id
+  role_definition_name = "Key Vault Crypto Officer"
+  principal_id         = azurerm_user_assigned_identity.smallstep.principal_id
+  depends_on           = [azurerm_key_vault.kms]
+}
+
 resource "azurerm_key_vault_key" "gateway_jwt" {
   name         = "gateway-jwt-signing-key"
   key_vault_id = azurerm_key_vault.kms.id
