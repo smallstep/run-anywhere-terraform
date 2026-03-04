@@ -16,10 +16,18 @@ resource "azurerm_key_vault" "kms" {
   rbac_authorization_enabled  = true
 }
 
+resource "azurerm_role_assignment" "terraform_kms_crypto_officer" {
+  scope                = azurerm_key_vault.kms.id
+  role_definition_name = "Key Vault Crypto Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
 resource "azurerm_key_vault_key" "gateway_jwt" {
   name         = "gateway-jwt-signing-key"
   key_vault_id = azurerm_key_vault.kms.id
   key_type     = "EC"
   curve        = "P-256"
   key_opts     = ["sign", "verify"]
+
+  depends_on = [azurerm_role_assignment.terraform_kms_crypto_officer]
 }
