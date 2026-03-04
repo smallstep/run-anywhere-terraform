@@ -62,20 +62,18 @@ resource "kubernetes_secret" "veneer_auth" {
   }
 }
 
-resource "null_resource" "generate_oidc_jwk" {
-  provisioner "local-exec" {
-    command = "${path.module}/scripts/create_oidc_secret.sh"
-
-    environment = {
-      VAULT = azurerm_key_vault.secrets.name
-    }
-  }
-}
-
-data "azurerm_key_vault_secret" "oidcjwk" {
+# Generate JWKS before first apply:
+#   step crypto jwk create /dev/null /dev/stdout --kty RSA --force --no-password --insecure 2>/dev/null \
+#     | python3 -c "import sys,json; k=json.load(sys.stdin); print(json.dumps({'keys':[k]}))"
+# Then pass as TF_VAR_oidc_jwks="..." on first apply.
+resource "azurerm_key_vault_secret" "oidcjwk" {
   name         = "oidcjwk"
   key_vault_id = azurerm_key_vault.secrets.id
-  depends_on   = [null_resource.generate_oidc_jwk]
+  value        = var.oidc_jwks
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "kubernetes_secret" "oidc" {
@@ -84,7 +82,7 @@ resource "kubernetes_secret" "oidc" {
     namespace = var.namespace
   }
   data = {
-    jwks = data.azurerm_key_vault_secret.oidcjwk.value
+    jwks = azurerm_key_vault_secret.oidcjwk.value
   }
 }
 

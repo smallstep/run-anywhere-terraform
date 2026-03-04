@@ -57,6 +57,22 @@ variable "yubihsm_enabled" {
   type        = bool
 }
 
+variable "oidc_jwks" {
+  description = <<-EOT
+    OIDC signing JWKS (private key set, JSON). Required on first apply; ignored on subsequent applies.
+
+    Generate with:
+      step crypto jwk create /dev/null /dev/stdout \
+        --kty RSA --force --no-password --insecure 2>/dev/null \
+        | python3 -c "import sys,json; k=json.load(sys.stdin); print(json.dumps({'keys':[k]}))"
+
+    Pass as: TF_VAR_oidc_jwks="$(above command)"
+  EOT
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
 variable "node_count" {
   default     = 5
   description = "Number of nodes in the default AKS node pool."
