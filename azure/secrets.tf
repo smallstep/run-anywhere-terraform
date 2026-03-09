@@ -62,10 +62,8 @@ resource "kubernetes_secret" "veneer_auth" {
   }
 }
 
-# Generate JWKS before first apply:
-#   step crypto jwk create /dev/null /dev/stdout --kty RSA --force --no-password --insecure 2>/dev/null \
-#     | python3 -c "import sys,json; k=json.load(sys.stdin); print(json.dumps({'keys':[k]}))"
-# Then pass as TF_VAR_oidc_jwks="..." on first apply.
+# Generate and store JWKS before first apply by running scripts/create_oidc_secret.sh.
+# See that script and the oidc_jwks variable description for details.
 resource "azurerm_key_vault_secret" "oidcjwk" {
   name         = "oidcjwk"
   key_vault_id = azurerm_key_vault.secrets.id

@@ -61,12 +61,11 @@ variable "oidc_jwks" {
   description = <<-EOT
     OIDC signing JWKS (private key set, JSON). Required on first apply; ignored on subsequent applies.
 
-    Generate with:
-      step crypto jwk create /dev/null /dev/stdout \
-        --kty RSA --force --no-password --insecure 2>/dev/null \
-        | python3 -c "import sys,json; k=json.load(sys.stdin); print(json.dumps({'keys':[k]}))"
+    Preferred: run scripts/create_oidc_secret.sh (after Key Vault exists) to generate and
+    store the JWKS directly in Key Vault, then apply with this variable left blank.
 
-    Pass as: TF_VAR_oidc_jwks="$(above command)"
+    Alternative: generate with the command in scripts/create_oidc_secret.sh and pass as
+    TF_VAR_oidc_jwks="..." on first apply.
   EOT
   type      = string
   sensitive = true
