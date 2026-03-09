@@ -1,5 +1,4 @@
-
-resource "kubernetes_namespace" "smallstep" {
+resource "kubernetes_namespace_v1" "smallstep" {
   metadata {
     name = var.namespace
 

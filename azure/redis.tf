@@ -8,7 +8,7 @@ resource "azurerm_redis_cache" "smallstep" {
   sku_name = "Standard"
   capacity = 1
 
-  enable_non_ssl_port           = false
+  non_ssl_port_enabled          = false
   minimum_tls_version           = "1.2"
   public_network_access_enabled = false
   redis_version                 = var.redis_version
@@ -25,6 +25,17 @@ resource "azurerm_private_endpoint" "redis" {
     is_manual_connection           = false
     private_connection_resource_id = azurerm_redis_cache.smallstep.id
     subresource_names              = ["redisCache"]
+  }
+}
+
+resource "kubernetes_secret" "redis_auth" {
+  metadata {
+    name      = "redis-auth"
+    namespace = var.namespace
+  }
+
+  data = {
+    password = azurerm_redis_cache.smallstep.primary_access_key
   }
 }
 

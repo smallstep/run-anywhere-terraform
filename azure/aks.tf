@@ -8,14 +8,14 @@ resource "azurerm_kubernetes_cluster" "primary" {
   name                      = var.k8s_cluster_name
   location                  = azurerm_resource_group.smallstep.location
   resource_group_name       = azurerm_resource_group.smallstep.name
-  automatic_channel_upgrade = "stable"
+  automatic_upgrade_channel = "stable"
   dns_prefix                = var.k8s_cluster_name
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
 
   default_node_pool {
     name            = "default"
-    node_count      = 3
+    node_count      = var.node_count
     vm_size         = "Standard_D2_v2"
     os_disk_size_gb = 30
     vnet_subnet_id  = azurerm_subnet.default.id
@@ -57,7 +57,6 @@ resource "azurerm_role_assignment" "smallstep_storage_blob_data_contributor" {
 
 resource "azurerm_federated_identity_credential" "smallstep-landlord" {
   name                = "smallstep-landlord"
-  resource_group_name = azurerm_resource_group.smallstep.name
   audience            = ["api://AzureADTokenExchange"]
   issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
   parent_id           = azurerm_user_assigned_identity.smallstep.id
@@ -66,9 +65,40 @@ resource "azurerm_federated_identity_credential" "smallstep-landlord" {
 
 resource "azurerm_federated_identity_credential" "smallstep-veto" {
   name                = "smallstep-veto"
-  resource_group_name = azurerm_resource_group.smallstep.name
   audience            = ["api://AzureADTokenExchange"]
   issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
   parent_id           = azurerm_user_assigned_identity.smallstep.id
   subject             = "system:serviceaccount:${var.namespace}:veto-acc"
+}
+
+resource "azurerm_federated_identity_credential" "smallstep-gateway" {
+  name                = "smallstep-gateway"
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:gateway"
+}
+
+resource "azurerm_federated_identity_credential" "smallstep-guardian" {
+  name                = "smallstep-guardian"
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:guardian"
+}
+
+resource "azurerm_federated_identity_credential" "smallstep-mission-control" {
+  name                = "smallstep-mission-control"
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:mission-control"
+}
+
+resource "azurerm_federated_identity_credential" "smallstep-majordomo" {
+  name                = "smallstep-majordomo"
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.primary.oidc_issuer_url
+  parent_id           = azurerm_user_assigned_identity.smallstep.id
+  subject             = "system:serviceaccount:${var.namespace}:majordomo"
 }

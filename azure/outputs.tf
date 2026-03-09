@@ -1,10 +1,9 @@
-
 output "name_servers" {
   value = azurerm_dns_zone.default.name_servers
 }
 
 output "postgres_host" {
-  value = azurerm_postgresql_server.postgres.fqdn
+  value = azurerm_postgresql_flexible_server.postgres.fqdn
 }
 
 output "kms_vault" {
@@ -26,4 +25,12 @@ output "primary_blob_host" {
 output "azure_storage_key" {
   value     = azurerm_storage_account.default.primary_access_key
   sensitive = true
+}
+
+output "gateway_jwt_signing_key" {
+  value = "azurekms:name=${azurerm_key_vault_key.gateway_jwt.name};vault=${azurerm_key_vault.kms.name}"
+}
+
+output "gateway_jwt_signing_pubkey" {
+  value = base64encode(azurerm_key_vault_key.gateway_jwt.public_key_pem)
 }

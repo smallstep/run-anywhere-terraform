@@ -56,3 +56,24 @@ variable "yubihsm_enabled" {
   description = "Yubi HSM enabled"
   type        = bool
 }
+
+variable "oidc_jwks" {
+  description = <<-EOT
+    OIDC signing JWKS (private key set, JSON). Required on first apply; ignored on subsequent applies.
+
+    Preferred: run scripts/create_oidc_secret.sh (after Key Vault exists) to generate and
+    store the JWKS directly in Key Vault, then apply with this variable left blank.
+
+    Alternative: generate with the command in scripts/create_oidc_secret.sh and pass as
+    TF_VAR_oidc_jwks="..." on first apply.
+  EOT
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "node_count" {
+  default     = 5
+  description = "Number of nodes in the default AKS node pool."
+  type        = number
+}

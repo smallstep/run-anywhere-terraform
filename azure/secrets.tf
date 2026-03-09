@@ -13,7 +13,7 @@ resource "azurerm_key_vault" "secrets" {
   soft_delete_retention_days  = 7
   purge_protection_enabled    = false
   sku_name                    = "standard"
-  enable_rbac_authorization   = false
+  rbac_authorization_enabled  = false
 
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
@@ -62,20 +62,16 @@ resource "kubernetes_secret" "veneer_auth" {
   }
 }
 
-resource "null_resource" "generate_oidc_jwk" {
-  provisioner "local-exec" {
-    command = "${path.module}/scripts/create_oidc_secret.sh"
-
-    environment = {
-      VAULT = azurerm_key_vault.secrets.name
-    }
-  }
-}
-
-data "azurerm_key_vault_secret" "oidcjwk" {
+# Generate and store JWKS before first apply by running scripts/create_oidc_secret.sh.
+# See that script and the oidc_jwks variable description for details.
+resource "azurerm_key_vault_secret" "oidcjwk" {
   name         = "oidcjwk"
   key_vault_id = azurerm_key_vault.secrets.id
-  depends_on   = [null_resource.generate_oidc_jwk]
+  value        = var.oidc_jwks
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "kubernetes_secret" "oidc" {
@@ -84,7 +80,7 @@ resource "kubernetes_secret" "oidc" {
     namespace = var.namespace
   }
   data = {
-    jwks = data.azurerm_key_vault_secret.oidcjwk.value
+    jwks = azurerm_key_vault_secret.oidcjwk.value
   }
 }
 
@@ -181,6 +177,29 @@ resource "kubernetes_secret" "majordomo_provisioner_password" {
 
   data = {
     password = azurerm_key_vault_secret.majordomo_provisioner_password.value
+  }
+}
+
+# Randomly generated password for mission-control
+resource "random_password" "missioncontrol_provisioner_password" {
+  length  = 32
+  special = false
+}
+
+resource "azurerm_key_vault_secret" "missioncontrol_provisioner_password" {
+  name         = "missioncontrol-provisioner-password"
+  key_vault_id = azurerm_key_vault.secrets.id
+  value        = random_password.missioncontrol_provisioner_password.result
+}
+
+resource "kubernetes_secret" "missioncontrol_provisioner_password" {
+  metadata {
+    name      = "missioncontrol-provisioner-password"
+    namespace = var.namespace
+  }
+
+  data = {
+    password = azurerm_key_vault_secret.missioncontrol_provisioner_password.value
   }
 }
 
