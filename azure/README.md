@@ -17,6 +17,7 @@ On first apply, make sure to pass in the values of the following variables to cr
 * private_issuer_password
 * smtp_password
 * yubihsm_pin (optional)
+* oidc_jwks (optional — see OIDC JWKS note in the apply section below)
 
 Our recommendation is creating high-level variables with a default value of an empty string to pass into the module block; subsequently, you can pass in the actual secrets during your first Terraform apply of the module. These variables are marked "secret" in Terraform to avoid leaking them in Terraform's responses on the command line, and we recommend passing the command line `HISTCONTROL=ignorespace` before running your apply to prevent leaking secrets into your session history. (If you are using a YubiHSM2 and have set the value of `hsm_enabled = true`, also pass in the HSM PIN code in hexadecimal and password to variable `yubihsm_pin`. For example, authentication key id `0x0001` with password `password` would follow the form: -var yubihsm_pin="0001password")
 
@@ -57,6 +58,13 @@ variable "yubihsm_pin" {
   sensitive   = true
 }
 
+variable "oidc_jwks" {
+  default     = ""
+  description = "OIDC JWKS private key. Set on first apply, leave blank on subsequent applies."
+  type        = string
+  sensitive   = true
+}
+
 provider "azurerm" {
   features {}
 }
@@ -71,6 +79,7 @@ module "run_anywhere" {
   smtp_password           = var.smtp_password
   yubihsm_pin             = var.yubihsm_pin
   yubihsm_enabled         = true
+  oidc_jwks               = var.oidc_jwks
 }
 
 output "output" {
@@ -82,10 +91,24 @@ output "output" {
 
 ```shell
 terraform init
-HISTCONTROL=ignorespace
 
-terraform apply -var private_issuer_password="${private_issuer_password}" -var smtp_password="${smtp_password}" -var yubihsm_pin="${yubihsm_auth_id}${yubihsm_pin}"
+TF_VAR_private_issuer_password="..." \
+TF_VAR_smtp_password="..." \
+TF_VAR_yubihsm_pin="..." \
+terraform apply
 ```
+
+For the OIDC JWKS, the preferred workflow is to run `scripts/create_oidc_secret.sh` after
+the Key Vault exists (after the first apply or targeting the Key Vault resource), which
+generates the JWKS and stores it directly in Key Vault:
+
+```shell
+VAULT=<key-vault-name> scripts/create_oidc_secret.sh
+```
+
+Then apply with `oidc_jwks` left blank (the default). Alternatively, pass the JWKS on
+first apply via `TF_VAR_oidc_jwks="..."`. Either way, subsequent applies can omit it —
+the Key Vault secret is configured with `ignore_changes` so Terraform will not overwrite it.
 
 ## TODO
 
