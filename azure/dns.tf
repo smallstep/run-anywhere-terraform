@@ -124,16 +124,16 @@ resource "azurerm_dns_a_record" "inventory" {
   records             = [azurerm_public_ip.smallstep_address.ip_address]
 }
 
-resource "azurerm_dns_a_record" "att_dev" {
-  name                = "att.dev"
+resource "azurerm_dns_a_record" "att" {
+  name                = "att"
   zone_name           = azurerm_dns_zone.default.name
   resource_group_name = azurerm_resource_group.smallstep.name
   ttl                 = 300
   records             = [azurerm_public_ip.smallstep_address.ip_address]
 }
 
-resource "azurerm_dns_a_record" "river_infra_dev" {
-  name                = "river.infra.dev"
+resource "azurerm_dns_a_record" "river_infra" {
+  name                = "river.infra"
   zone_name           = azurerm_dns_zone.default.name
   resource_group_name = azurerm_resource_group.smallstep.name
   ttl                 = 300
