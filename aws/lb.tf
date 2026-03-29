@@ -17,7 +17,7 @@ resource "aws_iam_role_policy" "load_balancer_role_policy" {
   name = "${var.default_name}-lb-all-nodes"
   role = aws_iam_role.eks_node_group.id
 
-  policy = data.http.load_balancer_policy.body
+  policy = data.http.load_balancer_policy.response_body
 }
 
 # 
