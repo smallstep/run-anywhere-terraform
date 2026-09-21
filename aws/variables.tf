@@ -186,13 +186,13 @@ variable "rds_enable_cloudwatch_logging" {
 }
 
 variable "rds_engine_version" {
-  default     = 13.4
-  description = "Desired Postgres aurora version for all associated PostgreSQL databases."
-  type        = number
+  default     = "16.4"
+  description = "Aurora PostgreSQL engine version. The platform requires PostgreSQL 14 or newer."
+  type        = string
 
   validation {
-    condition     = var.rds_engine_version >= 11
-    error_message = "Minimum allowed PostgreSQL version is 11."
+    condition     = tonumber(split(".", var.rds_engine_version)[0]) >= 14
+    error_message = "The platform requires PostgreSQL 14 or newer."
   }
 }
 
@@ -232,10 +232,39 @@ variable "region" {
   type        = string
 }
 
+variable "eks_version" {
+  default     = "1.31"
+  description = "Kubernetes version for the EKS cluster. Pinned so an EKS default bump cannot retire an API the bundled components still use; change it deliberately."
+  type        = string
+}
+
+variable "cluster_endpoint_private_only" {
+  default     = false
+  description = "When true the EKS API endpoint is reachable only from inside the VPC; kubectl and the kots CLI then need a bastion or VPN. When false, access is limited to security_groups_cidr_blocks, which must then be non-empty."
+  type        = bool
+}
+
+variable "node_root_volume_size" {
+  default     = 100
+  description = "Root volume size in GiB for worker nodes. Encrypted with the project KMS key via a launch template."
+  type        = number
+}
+
+variable "linkerd_inject" {
+  default     = false
+  description = "Annotate the application namespace for Linkerd proxy injection. The current release does not require a service mesh; leave false unless you run Linkerd deliberately."
+  type        = bool
+}
+
 variable "security_groups_cidr_blocks" {
   default     = []
-  description = "Security groups for the module can be set to allow ingress and egress traffic"
+  description = "Operator CIDR ranges allowed to reach the EKS API endpoint (and the base security group rules). Required unless cluster_endpoint_private_only is true: an empty list with a public endpoint would otherwise be open to the internet."
   type        = list(string)
+
+  validation {
+    condition     = var.cluster_endpoint_private_only || length(var.security_groups_cidr_blocks) > 0
+    error_message = "security_groups_cidr_blocks must list the operator ranges when the EKS endpoint is public; set cluster_endpoint_private_only = true to have no public endpoint."
+  }
 }
 
 variable "smtp_password" {
@@ -261,12 +290,17 @@ variable "subnets_private" {
 }
 
 variable "subnets_public" {
-  description = "List of public subnets used by NLB for the project."
+  description = "List of public subnets used by NLB for the project. One Elastic IP is allocated per public subnet, so this list must be the same length as subnets_private."
   type        = list(string)
 
   validation {
     condition     = length(var.subnets_public) > 1
     error_message = "Must use 2 or more public subnets."
+  }
+
+  validation {
+    condition     = length(var.subnets_public) == length(var.subnets_private)
+    error_message = "subnets_public and subnets_private must have the same number of entries."
   }
 }
 
@@ -288,9 +322,4 @@ variable "yubihsm_pin" {
   }
 }
 
-#-----------------------------------------------------------------------------------------------------------------------------------------------
 
-# Validation hack
-resource "null_resource" "same_number_of_public_and_private_subnets" {
-  count = length(var.subnets_private) == length(var.subnets_public) ? 0 : "Lengths of var.subnets_private and var.subnets_public do not match!"
-}
