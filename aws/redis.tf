@@ -52,6 +52,8 @@ resource "aws_elasticache_replication_group" "redis" {
   apply_immediately          = true
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
+  auth_token                 = random_password.redis_auth.result
+  auth_token_update_strategy = "ROTATE"
   automatic_failover_enabled = var.redis_cache_clusters > 1 ? true : false
   auto_minor_version_upgrade = true
   engine                     = "redis"

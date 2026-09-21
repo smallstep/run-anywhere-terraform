@@ -14,10 +14,14 @@ data "aws_iam_policy_document" "eks_service_account" {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     effect  = "Allow"
 
+    # Every platform service account in the namespace assumes this role: the
+    # release annotates landlord, gateway, veto, mission-control and others
+    # with the same role ARN, so pinning a single account name here breaks
+    # everything but that one.
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
-      values   = ["system:serviceaccount:smallstep:landlord"]
+      values   = ["system:serviceaccount:${var.k8s_namespace}:*"]
     }
 
     condition {
@@ -52,6 +56,7 @@ module "eks_base_security_group_rules" {
 resource "aws_eks_cluster" "eks" {
   name     = var.default_name
   role_arn = aws_iam_role.eks_cluster.arn
+  version  = var.eks_version
 
   encryption_config {
     resources = ["secrets"]
@@ -67,9 +72,9 @@ resource "aws_eks_cluster" "eks" {
   # var.security_groups_cidr_blocks
   #tfsec:ignore:aws-eks-no-public-cluster-access tfsec:ignore:aws-eks-no-public-cluster-access-to-cidr
   vpc_config {
-    endpoint_public_access  = true
+    endpoint_public_access  = !var.cluster_endpoint_private_only
     endpoint_private_access = true
-    public_access_cidrs     = var.security_groups_cidr_blocks
+    public_access_cidrs     = var.cluster_endpoint_private_only ? [] : var.security_groups_cidr_blocks
     subnet_ids              = var.subnets_private
   }
 
@@ -86,6 +91,44 @@ resource "aws_eks_cluster" "eks" {
   ]
 }
 
+# Worker node launch template: encrypted root volumes and IMDSv2. Without a
+# launch template the node group gets default-sized, unencrypted roots and
+# IMDSv1; a hop limit of 2 keeps IMDS reachable from pods (the load balancer
+# controller discovers its region and VPC through it).
+resource "aws_launch_template" "eks" {
+  name_prefix = "${var.default_name}-eks-"
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      volume_size           = var.node_root_volume_size
+      volume_type           = "gp3"
+      encrypted             = true
+      kms_key_id            = aws_kms_key.smallstep.arn
+      delete_on_termination = true
+    }
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name        = var.default_name
+      Description = var.default_description
+    }
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 # Node pool to run the Replicated stack
 resource "aws_eks_node_group" "eks" {
   cluster_name    = aws_eks_cluster.eks.name
@@ -93,6 +136,11 @@ resource "aws_eks_node_group" "eks" {
   node_group_name = var.default_name
   node_role_arn   = aws_iam_role.eks_node_group.arn
   subnet_ids      = var.subnets_private
+
+  launch_template {
+    id      = aws_launch_template.eks.id
+    version = aws_launch_template.eks.latest_version
+  }
 
   scaling_config {
     desired_size = var.k8s_pool_desired
@@ -168,15 +216,37 @@ resource "aws_iam_role_policy" "eks_service_account" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # kms:CreateKey cannot be resource-scoped: there is no key, hence no ARN,
+      # until the call succeeds. The CA service creates its signing keys at
+      # runtime and tags and aliases them in the same breath.
       {
-        Action   = ["kms:GetPublicKey", "kms:TagResource", "kms:CreateAlias", "kms:CreateKey", "kms:Sign"]
+        Sid      = "CreateCAKeys"
+        Action   = ["kms:CreateKey", "kms:TagResource", "kms:CreateAlias"]
         Effect   = "Allow"
-        Resource = aws_kms_key.smallstep.arn
+        Resource = "*"
       },
+      # Sign with keys whose ARNs are unknowable at plan time (created above).
       {
-        Action   = ["s3:PutObject"]
+        Sid      = "SignWithRuntimeKeys"
+        Action   = ["kms:Sign", "kms:Verify", "kms:GetPublicKey", "kms:DescribeKey"]
         Effect   = "Allow"
-        Resource = aws_s3_bucket.veto_crls.arn
+        Resource = "*"
+      },
+      # The Terraform-managed gateway JWT signing key, named explicitly so the
+      # statement above can later be narrowed to runtime-created keys.
+      {
+        Sid      = "SignGatewayJWT"
+        Action   = ["kms:Sign", "kms:GetPublicKey", "kms:DescribeKey"]
+        Effect   = "Allow"
+        Resource = aws_kms_key.gateway_jwt.arn
+      },
+      # CRL publishing. Object actions only match "<bucket>/*"; bucket actions
+      # only match the bucket ARN.
+      {
+        Sid      = "PublishCRLs"
+        Action   = ["s3:PutObject", "s3:DeleteObject", "s3:ListBucket", "s3:GetBucketLocation"]
+        Effect   = "Allow"
+        Resource = [aws_s3_bucket.veto_crls.arn, "${aws_s3_bucket.veto_crls.arn}/*"]
       },
     ]
   })

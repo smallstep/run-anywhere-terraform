@@ -28,6 +28,20 @@ data "aws_secretsmanager_secret_version" "majordomo_secret" {
   ]
 }
 
+data "aws_secretsmanager_secret_version" "missioncontrol_secret" {
+  secret_id = aws_secretsmanager_secret.missioncontrol_secret.id
+  depends_on = [
+    aws_secretsmanager_secret_version.missioncontrol_secret
+  ]
+}
+
+data "aws_secretsmanager_secret_version" "redis_auth" {
+  secret_id = aws_secretsmanager_secret.redis_auth.id
+  depends_on = [
+    aws_secretsmanager_secret_version.redis_auth
+  ]
+}
+
 data "aws_secretsmanager_secret_version" "oidc_jwks" {
   secret_id = aws_secretsmanager_secret.oidc_jwks.id
   depends_on = [
@@ -69,9 +83,7 @@ resource "kubernetes_namespace" "install_namespace" {
   metadata {
     name = var.k8s_namespace
 
-    annotations = {
-      "linkerd.io/inject" = "enabled"
-    }
+    annotations = var.linkerd_inject ? { "linkerd.io/inject" = "enabled" } : {}
   }
 }
 
@@ -112,6 +124,34 @@ resource "kubernetes_secret" "majordomo" {
   }
   data = {
     password = data.aws_secretsmanager_secret_version.majordomo_secret.secret_string
+  }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
+}
+
+resource "kubernetes_secret" "missioncontrol" {
+  metadata {
+    name      = "missioncontrol-provisioner-password"
+    namespace = var.k8s_namespace
+  }
+  data = {
+    password = data.aws_secretsmanager_secret_version.missioncontrol_secret.secret_string
+  }
+
+  depends_on = [
+    null_resource.kube_config
+  ]
+}
+
+resource "kubernetes_secret" "redis_auth" {
+  metadata {
+    name      = "redis-auth"
+    namespace = var.k8s_namespace
+  }
+  data = {
+    password = data.aws_secretsmanager_secret_version.redis_auth.secret_string
   }
 
   depends_on = [

@@ -26,6 +26,10 @@ locals {
   # If we're going to set up logs for Aurora, the following are what we need to make sure everything works
   rds_logging_params = [
     {
+      name  = "rds.force_ssl"
+      value = "1"
+    },
+    {
       name  = "idle_in_transaction_session_timeout"
       value = "${var.rds_transaction_timeout}"
     },
@@ -51,10 +55,16 @@ locals {
     }
   ]
 
-  rds_non_logging_params = [{
-    name  = "idle_in_transaction_session_timeout"
-    value = "${var.rds_transaction_timeout}"
-  }]
+  rds_non_logging_params = [
+    {
+      name  = "rds.force_ssl"
+      value = "1"
+    },
+    {
+      name  = "idle_in_transaction_session_timeout"
+      value = "${var.rds_transaction_timeout}"
+    }
+  ]
 }
 
 # Set up the SG assigned to each db with a base set of recommended ICMP rules

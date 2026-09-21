@@ -45,6 +45,56 @@ resource "aws_secretsmanager_secret" "yubihsm_pin" {
   }
 }
 
+# Asymmetric P-256 key the gateway signs API tokens with. The private half
+# never leaves KMS; the KOTS config takes the key id and the base64 public key
+# (see outputs). KMS cannot rotate asymmetric material, so no rotation here.
+resource "aws_kms_key" "gateway_jwt" {
+  description              = "${var.default_name} gateway JWT signing key (ES256)"
+  key_usage                = "SIGN_VERIFY"
+  customer_master_key_spec = "ECC_NIST_P256"
+  deletion_window_in_days  = var.backup_retention_period
+
+  tags = {
+    Name      = "${var.default_name}-gateway-jwt"
+    ManagedBy = var.default_description
+  }
+}
+
+resource "aws_kms_alias" "gateway_jwt" {
+  name          = "alias/${var.default_name}-gateway-jwt"
+  target_key_id = aws_kms_key.gateway_jwt.key_id
+}
+
+data "aws_kms_public_key" "gateway_jwt" {
+  key_id = aws_kms_key.gateway_jwt.arn
+}
+
+# This secret is procedurally generated and populated below
+resource "aws_secretsmanager_secret" "missioncontrol_secret" {
+  name                    = "${var.default_name}-missioncontrol-secret"
+  description             = "${var.default_name} provisioner password used by mission-control in EKS"
+  kms_key_id              = aws_kms_key.smallstep.id
+  recovery_window_in_days = var.backup_retention_period
+
+  tags = {
+    Name        = "${var.default_name}-missioncontrol-secret"
+    Description = var.default_description
+  }
+}
+
+# This secret is procedurally generated and populated below
+resource "aws_secretsmanager_secret" "redis_auth" {
+  name                    = "${var.default_name}-redis-auth"
+  description             = "${var.default_name} AUTH token for the Redis replication group"
+  kms_key_id              = aws_kms_key.smallstep.id
+  recovery_window_in_days = var.backup_retention_period
+
+  tags = {
+    Name        = "${var.default_name}-redis-auth"
+    Description = var.default_description
+  }
+}
+
 # This secret is procedurally generated and populated by a null resource below
 resource "aws_secretsmanager_secret" "majordomo_secret" {
   name                    = "${var.default_name}-majordomo-secret"
@@ -161,6 +211,16 @@ resource "aws_secretsmanager_secret_version" "majordomo_secret" {
   secret_string = random_password.majordomo_secret.result
 }
 
+resource "aws_secretsmanager_secret_version" "missioncontrol_secret" {
+  secret_id     = aws_secretsmanager_secret.missioncontrol_secret.id
+  secret_string = random_password.missioncontrol_secret.result
+}
+
+resource "aws_secretsmanager_secret_version" "redis_auth" {
+  secret_id     = aws_secretsmanager_secret.redis_auth.id
+  secret_string = random_password.redis_auth.result
+}
+
 resource "aws_secretsmanager_secret_version" "master_password_initial" {
   secret_id     = aws_secretsmanager_secret.master_password.id
   secret_string = jsonencode(local.master_creds)
@@ -230,6 +290,19 @@ resource "random_password" "initial_master_password" {
 
 # Randomly generated password for majordomo
 resource "random_password" "majordomo_secret" {
+  length  = 32
+  special = false
+}
+
+# Randomly generated provisioner password for mission-control
+resource "random_password" "missioncontrol_secret" {
+  length  = 32
+  special = false
+}
+
+# Redis AUTH token: ElastiCache allows 16-128 printable characters excluding
+# @, " and /, so alphanumeric only.
+resource "random_password" "redis_auth" {
   length  = 32
   special = false
 }
