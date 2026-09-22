@@ -12,6 +12,12 @@ aws/
                the platform's databases and Kubernetes secrets
   modules/     network, dns, kms, eks, data, crl-bucket, iam-app, ses-smtp,
                cluster-addons, smallstep-bootstrap
+  Makefile     every workflow, in install order — start with `make help`
+  scripts/     state bucket, kubeconfig, KOTS configuration, headless install,
+               DNS reconcile, staged verification
+  kots/        the KOTS ConfigValues template the install renders from Terraform outputs
+  docs/        the DNS delegation gate; egress requirements
+  install.conf.example   the deployment's identity for the tooling; env.example the API token
 ```
 
 Two roots because the Kubernetes and Helm providers in `workloads` are
@@ -29,45 +35,55 @@ it is; every root's `variables.tf` documents its inputs, and
 - [`aws`](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html),
   [`kubectl`](https://kubernetes.io/docs/tasks/tools/) with the
   [kots plugin](https://docs.replicated.com/reference/kots-cli-getting-started),
-  [`helm`](https://helm.sh/docs/helm/helm_install/).
+  [`helm`](https://helm.sh/docs/helm/helm_install/), `jq`, `curl`, `dig`.
+  `make preflight` checks all of it.
+- **A Replicated license** for your customer record, downloaded from the
+  vendor portal to `~/.local/share/<name>/license.yaml`, and the slug of the
+  channel it is bound to (`replicated_channel_slug` in `install.conf`).
 - **A DNS zone you can delegate.** The platform is served under `base_domain`;
   its parent zone must carry an NS record for it before the application is
   installed. Let's Encrypt, the CloudFront certificate in the default CRL
   mode, and the application's preflights all resolve the names publicly.
-- **An S3 bucket for state**, created once by hand with versioning on and
-  Block Public Access on. Locking is S3-native (`use_lockfile`); no DynamoDB
-  table. Each root's `backend.hcl.example` shows the backend configuration.
+- **An S3 bucket for state.** `make state-bucket` creates it (versioning,
+  SSE, Block Public Access; locking is S3-native, no DynamoDB table) and
+  writes each root's `backend.hcl`. Each root's `backend.hcl.example` shows
+  the shape if you create the bucket yourself.
 
 #### Order of operations
 
+Everything runs from `aws/` through the Makefile; `make help` lists the
+targets in this order.
+
 ```shell
-# 1. platform — about 25 minutes
-cd aws/platform
-cp backend.hcl.example backend.hcl            # set the bucket
-cp terraform.tfvars.example terraform.tfvars  # set name, region, base_domain, your operator CIDRs
-terraform init -backend-config=backend.hcl
-terraform apply
-
-# 2. delegate the zone in its parent, then confirm before continuing
-terraform output route53_name_servers
-dig NS <base_domain>
-
-# 3. workloads — cluster addons and the bootstrap Job
-cd ../workloads
-cp backend.hcl.example backend.hcl            # same bucket, key workloads.tfstate
-cp terraform.tfvars.example terraform.tfvars  # the state bucket platform used
-aws eks update-kubeconfig --name <name> --region <region>
-terraform init -backend-config=backend.hcl
-terraform apply
-
-# 4. install the application from your Replicated channel with the
-#    configuration below, then point control.infra.<base_domain> at the
-#    mission-control load balancer the install creates.
+cp install.conf.example install.conf              # name, account, region, domain, team, channel slug
+cp platform/terraform.tfvars.example platform/terraform.tfvars    # the same name/region/domain, your operator CIDRs
+cp workloads/terraform.tfvars.example workloads/terraform.tfvars  # the state bucket
+cp env.example .env                               # filled in at step 8
+make preflight
 ```
 
-Delegation gates step 3 onwards: in the default `crl_mode`, `platform`'s
-apply blocks on ACM DNS validation until the zone resolves, and the
-application's install cannot issue its certificates without it.
+1. `make state-bucket` — one-time state bucket; writes each root's `backend.hcl`.
+2. `make platform-init && make platform-apply` — AWS infrastructure (about
+   25 minutes).
+3. **Delegate the zone**: add the NS record for `base_domain` in its parent
+   (`terraform -chdir=platform output route53_name_servers`) and confirm with
+   `make verify STAGE=dns` before continuing. See `docs/dns-delegation.md`;
+   in the default `crl_mode` the platform apply itself waits on it.
+4. `make kubeconfig` — writes a kubeconfig that names only this cluster;
+   every script and target reads the cluster through it.
+5. `make workloads-init && make workloads-apply` — cluster addons and the
+   bootstrap Job. `make verify STAGE=cluster` afterwards.
+6. `make config-values` — render the KOTS configuration from Terraform
+   outputs and `install.conf`.
+7. `make kots-install` — headless install from your channel (20–30 minutes to
+   full rollout), then `make dns-reconcile` to point `control.infra.<base_domain>`
+   at the agent control plane's load balancer the install created.
+8. Sign in to the dashboard, mint an API token (Settings → API Tokens) into
+   `.env`, then `make verify STAGE=app`.
+
+`make verify STAGE=<platform|dns|cluster|app>` checks each stage against what
+the configuration says should exist; use it after every step and after every
+upgrade.
 
 #### What the roots leave in place
 
