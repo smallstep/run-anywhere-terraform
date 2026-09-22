@@ -1,0 +1,12 @@
+# Terraform working state — never in git.
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+# Per-deployment configuration; the .example files are the committed contract.
+backend.hcl
+*.tfvars
+!*.tfvars.example

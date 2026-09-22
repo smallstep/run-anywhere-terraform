@@ -1,0 +1,247 @@
+#!/bin/bash
+# Rendered by Terraform from modules/smallstep-bootstrap/templates — the copy
+# in the cluster is disposable output, never the thing to edit.
+#
+# One script, four stages, dispatched on $1. Each stage runs in the container
+# whose pinned public image carries exactly the tools it needs (aws-cli, psql,
+# step, kubectl); the stages hand off through /work, an in-memory emptyDir
+# private to the Job's pod. Secrets pass through /work and never touch a node
+# disk or Terraform state: Terraform names the secret ARNs into this file, and
+# the pod reads the values under its own IRSA identity at run time.
+#
+# Idempotence contract, stage by stage — backoffLimit re-runs the WHOLE chain,
+# so every stage must tolerate its own success: fetch-secrets just re-reads;
+# init-db creates-if-absent and unconditionally ALTERs passwords so a rotation
+# upstream converges; gen-material regenerates into /work (the emptyDir is
+# fresh every run — the guard that matters is downstream); apply-secrets
+# converges the STABLE secrets with kubectl apply and refuses to touch the
+# GENERATED ones once they exist, because rotating a deployed JWKS would
+# orphan every configuration signed against the old one.
+
+set -euo pipefail
+
+STAGE="$${1:?usage: bootstrap.sh <fetch-secrets|init-db|gen-material|apply-secrets>}"
+
+NS="${namespace}"
+REGION="${region}"
+SECRETS=/work/secrets
+GEN=/work/gen
+
+log() { echo "[bootstrap/$STAGE] $*"; }
+die() { echo "[bootstrap/$STAGE] ERROR: $*" >&2; exit 1; }
+
+# json_field FILE FIELD — pull one string field out of a flat JSON object.
+# sed rather than jq because neither postgres:16-alpine nor the aws-cli image
+# ships jq, and installing tools at run time is exactly the reproducibility
+# hole the pinned-image design closed. Correct only because stage 1 generates
+# these values without `"` or `\`; a secret hand-edited to contain either
+# will parse wrong here, silently.
+json_field() {
+  sed -n -E "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"([^\"]*)\".*/\1/p" "$1"
+}
+
+case "$STAGE" in
+
+  # ---------------------------------------------------------------------------
+  # Stage 1 (aws-cli image, root): pull all ten app secrets out of Secrets
+  # Manager. All ten even though this pod only consumes nine — fetching
+  # kots_admin_password too means a bad ARN or a missing IAM grant fails HERE,
+  # in the stage named for the problem, instead of later inside kots-install.
+  fetch-secrets)
+    mkdir -p "$SECRETS" "$GEN"
+
+    # printf, not a bare redirect: `--output text` appends a newline, and a
+    # trailing \n baked into a password fails Postgres auth with an error
+    # indistinguishable from a wrong password. Command substitution strips it.
+%{ for key, arn in secret_arns ~}
+    v="$(aws --region "$REGION" secretsmanager get-secret-value \
+      --secret-id '${arn}' \
+      --query SecretString --output text)"
+    [ -n "$v" ] || die "secret ${key} came back empty"
+    printf '%s' "$v" > "$SECRETS/${key}"
+%{ endfor ~}
+
+    chmod 600 "$SECRETS"/*
+    # Ownership handoff, matched to the pinned uids in the Job spec: the
+    # apply-secrets container (bitnamilegacy/kubectl, uid 1001) reads /work/secrets;
+    # the gen-material container (step-cli, uid 1000) writes /work/gen. Files
+    # left root-owned at mode 600 would fail those stages with a "Permission
+    # denied" that points at the wrong container.
+    chown -R 1001:1001 "$SECRETS"
+    chown 1000:1000 "$GEN"
+
+    log "fetched $(find "$SECRETS" -type f | wc -l) secrets"
+    ;;
+
+  # ---------------------------------------------------------------------------
+  # Stage 2 (postgres image, root): roles, databases, extensions. Everything
+  # here is written to be re-run: existence checks guard CREATEs, ALTERs are
+  # unconditional so password rotation converges, CREATE EXTENSION is
+  # IF NOT EXISTS.
+  init-db)
+    MASTER_PW="$(json_field "$SECRETS/master" password)"
+    [ -n "$MASTER_PW" ] || die "could not parse password out of the master secret JSON"
+    APP_PW="$(cat "$SECRETS/postgres_app")"
+    CACHE_PW="$(cat "$SECRETS/postgres_landlordcachesrv")"
+
+    export PGHOST="${rds_host}"
+    export PGPORT="${rds_port}"
+    export PGUSER=postgres
+    export PGDATABASE=postgres
+    export PGPASSWORD="$MASTER_PW"
+    # `require` encrypts the connection but authenticates nothing —
+    # verify-full would also need the RDS trust anchors mounted into this
+    # image. The exposure window is this Job's in-VPC connections only.
+    export PGSSLMODE=require
+
+    psql -qAt -c 'SELECT 1' >/dev/null \
+      || die "cannot reach postgres at ${rds_host}:${rds_port} as the master user"
+
+    # SQL string literals: double any single quote. The generators exclude
+    # quote characters today; this guards the day one stops.
+    APP_PW_SQL="$${APP_PW//\'/\'\'}"
+    CACHE_PW_SQL="$${CACHE_PW//\'/\'\'}"
+
+    q() { psql -v ON_ERROR_STOP=1 -qAt -c "$1" >/dev/null; }
+    exists() { [ "$(psql -qAt -c "$1")" = "1" ]; }
+
+    # CREATEDB is the pivot of the whole database story: the platform's
+    # admin-tools initContainer creates the other 10 of the 16 databases
+    # itself because this role can. Only six are pre-created below.
+    if exists "SELECT 1 FROM pg_roles WHERE rolname = 'smallstep'"; then
+      log "role smallstep exists"
+    else
+      q "CREATE ROLE smallstep LOGIN CREATEDB PASSWORD '$APP_PW_SQL'"
+      log "created role smallstep"
+    fi
+    q "ALTER ROLE smallstep WITH LOGIN CREATEDB PASSWORD '$APP_PW_SQL'"
+
+    # RDS's master user is not a superuser: CREATE DATABASE ... OWNER other
+    # requires membership in `other`. Idempotent — re-granting an existing
+    # membership is a NOTICE, not an error.
+    q "GRANT smallstep TO postgres"
+
+    # Six of sixteen, pre-created so first boot has no ordering hazards:
+    # landlord in particular must exist before the replication grants at the
+    # bottom of this stage have a target. The remaining ten are admin-tools'
+    # job (see the CREATEDB note above).
+    for db in bouncer gateway guardian inventory mission_control landlord; do
+      if exists "SELECT 1 FROM pg_database WHERE datname = '$db'"; then
+        log "database $db exists"
+      else
+        q "CREATE DATABASE $db OWNER smallstep"
+        log "created database $db"
+      fi
+
+      # All four are TRUSTED extensions in PostgreSQL >= 13, which is why the
+      # unprivileged app role can create them in the ten databases it creates
+      # itself. The master user handles these six for symmetry.
+      for ext in uuid-ossp citext btree_gin pgcrypto; do
+        psql -v ON_ERROR_STOP=1 -qAt -d "$db" \
+          -c "CREATE EXTENSION IF NOT EXISTS \"$ext\"" >/dev/null
+      done
+    done
+
+    if exists "SELECT 1 FROM pg_roles WHERE rolname = 'landlordcachesrv'"; then
+      log "role landlordcachesrv exists"
+    else
+      q "CREATE ROLE landlordcachesrv LOGIN PASSWORD '$CACHE_PW_SQL'"
+      log "created role landlordcachesrv"
+    fi
+    q "ALTER ROLE landlordcachesrv WITH LOGIN PASSWORD '$CACHE_PW_SQL'"
+
+    # RDS offers no REPLICATION role attribute to customers; the rds_replication
+    # role plus rds.logical_replication=1 in the parameter group (stage 1's
+    # job) is the RDS spelling of it.
+    q "GRANT rds_replication TO landlordcachesrv"
+    q "GRANT CONNECT ON DATABASE landlord TO landlordcachesrv"
+
+    log "database bootstrap converged"
+    ;;
+
+  # ---------------------------------------------------------------------------
+  # Stage 3 (step-cli image, uid 1000): generate key material that has no
+  # Secrets Manager source. This stage ALWAYS regenerates (the emptyDir is
+  # fresh every run) — the create-if-absent guard in apply-secrets is what
+  # keeps a re-run from rotating the deployed JWKS.
+  gen-material)
+    mkdir -p "$GEN"
+
+    if [ -f "$SECRETS/oidc-jwks" ]; then
+      # Not one of the ten today. This branch is where a Secrets-Manager-
+      # managed JWKS slots in if key custody ever moves out of the cluster —
+      # at which point fetch-secrets' chown handoff must include uid 1000.
+      cp "$SECRETS/oidc-jwks" "$GEN/oidc-jwks"
+      log "using externally supplied OIDC JWKS"
+    else
+      # --no-password --insecure: the key's resting place is a Kubernetes
+      # Secret; a passphrase would only relocate the custody problem into a
+      # second secret in the same store.
+      step crypto jwk create "$GEN/oidc.pub.json" "$GEN/oidc.priv.json" \
+        --kty EC --curve P-256 --use sig --no-password --insecure
+      printf '{"keys":[%s]}' "$(cat "$GEN/oidc.priv.json")" > "$GEN/oidc-jwks"
+      log "generated OIDC signing JWK"
+    fi
+
+    # Google Workspace directory sync is not configured here; the platform still
+    # mounts the secret, so an empty JSON object satisfies the volume mount.
+    printf '%s' '{}' > "$GEN/scim-credentials.json"
+    ;;
+
+  # ---------------------------------------------------------------------------
+  # Stage 4 (kubectl image, uid 1001): publish everything as Kubernetes
+  # Secrets. Two regimes on purpose:
+  #   STABLE   — value lives in Secrets Manager; `kubectl apply` convergence
+  #              is exactly right, an upstream rotation lands on the next run.
+  #   GENERATED — value was minted in stage 3; create once and never touch,
+  #              because a new JWKS orphans the deployed configuration.
+  apply-secrets)
+    stable() { # name key file
+      kubectl -n "$NS" create secret generic "$1" \
+        --from-file="$2=$3" --dry-run=client -o yaml \
+        | kubectl -n "$NS" apply -f -
+    }
+
+    stable auth secret "$SECRETS/auth_secret"
+    stable postgresql password "$SECRETS/postgres_app"
+    # Two secret names, one value: the platform references the Redis
+    # credential as both `redis` and `redis-auth`.
+    stable redis password "$SECRETS/redis_auth"
+    stable redis-auth password "$SECRETS/redis_auth"
+    stable private-issuer password "$SECRETS/private_issuer"
+    stable majordomo-provisioner-password password "$SECRETS/majordomo_provisioner"
+    # Non-optional volume mount on the mission-control Deployment; without
+    # this secret the pod is stuck ContainerCreating and the install never
+    # reaches ready. Same regime as majordomo's: STABLE, Secrets-Manager-
+    # sourced, rotated only via db_password_version.
+    stable missioncontrol-provisioner-password password "$SECRETS/mission_control_provisioner"
+    stable postgresql-landlordcachesrv password "$SECRETS/postgres_landlordcachesrv"
+
+    # The smtp secret is the whole SES credential JSON; the platform wants
+    # only the password field. from-literal (not a temp file): /work/gen is
+    # owned by uid 1000 and this container runs as 1001.
+    SMTP_PW="$(json_field "$SECRETS/smtp" password)"
+    [ -n "$SMTP_PW" ] || die "could not parse password out of the smtp secret JSON"
+    kubectl -n "$NS" create secret generic smtp \
+      --from-literal=password="$SMTP_PW" --dry-run=client -o yaml \
+      | kubectl -n "$NS" apply -f -
+
+    once() { # name key file
+      if kubectl -n "$NS" get secret "$1" >/dev/null 2>&1; then
+        log "secret/$1 exists, leaving it alone"
+      else
+        kubectl -n "$NS" create secret generic "$1" --from-file="$2=$3"
+        log "created secret/$1"
+      fi
+    }
+
+    once oidc jwks "$GEN/oidc-jwks"
+    once scim-server-secrets credentials.json "$GEN/scim-credentials.json"
+    ;;
+
+  *)
+    die "unknown stage: $STAGE"
+    ;;
+esac
+
+log "stage complete"
