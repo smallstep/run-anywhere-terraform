@@ -1,0 +1,141 @@
+# KOTS ConfigValues template for the headless install. Rendered by
+# scripts/generate-config-values.sh (%TOKEN% placeholders come from the
+# platform root's outputs, install.conf, and a few env-overridable knobs) into
+# kots/generated/config-values.yaml, which `kubectl kots install` consumes.
+# Every key here must exist in the app's KOTS Config; a misspelled key is
+# silently accepted by KOTS and then silently ignored, which presents as a
+# platform that boots with a default where you expected your value.
+# Cross-check the key names against the app's Config when editing.
+#
+# Secret-typed Config items (postgresql_password, redis_password,
+# smtp_password, installer_password, oidc_jwks_base64,
+# scim_server_credentials_json_base64, majordomo/mission-control provisioner
+# passwords, default admin credentials, ...) are DELIBERATELY ABSENT. The
+# workloads bootstrap job pre-creates the Kubernetes secrets the app
+# manifests mount (auth, postgresql, redis, redis-auth, private-issuer, smtp,
+# majordomo-provisioner-password, missioncontrol-provisioner-password, oidc,
+# scim-server-secrets, postgresql-landlordcachesrv), sourced from Secrets
+# Manager — so secret material never transits this file, the KOTS archive,
+# or git. Putting a secret here would also freeze it into the admin-console
+# config, where it outlives rotation in Secrets Manager.
+#
+# Hidden DERIVED items (crl_bucket, crl_bucket_http_domain, kms_type,
+# pg_tlsmode) must NOT be set: their defaults are repl-template expressions
+# computed from the values below (e.g. crl_bucket = s3://crl.<base_domain>,
+# kms_type = AWSKMS when cloud_provider = aws). A ConfigValues entry overrides
+# the template, pinning the derivation at install time and breaking it on
+# every later config change.
+#
+# update_trust_bundle is rendered from CERT_ISSUER ("1" for private/
+# selfsigned, "0" otherwise), not pinned: "1" makes landlord mount the
+# smallstep-trust-store ConfigMap, which only exists when cert_issuer is
+# private/selfsigned — under letsencrypt a hardcoded "1" leaves landlord
+# stuck ContainerCreating on a missing mount. The letsencrypt value must be
+# an explicit "0" (the Config default): the render script refuses empty
+# substitutions, and omitting the key entirely would drop the
+# flip-CERT_ISSUER-to-private/selfsigned workflow. Its sibling
+# update_trust_bundle_include_default_cas is omitted because the Config
+# default is already "1".
+apiVersion: kots.io/v1beta1
+kind: ConfigValues
+metadata:
+  name: smallstep
+spec:
+  values:
+    # --- Team ----------------------------------------------------------------
+    team_name:
+      value: "%TEAM_NAME%"
+    team_slug:
+      value: "%TEAM_SLUG%"
+
+    # --- Cloud provider / key management -------------------------------------
+    cloud_provider:
+      value: "aws"
+    aws_region:
+      value: "%REGION%"
+    key_signer:
+      value: "kms"
+    aws_cluster_iam_role:
+      value: "%APP_IAM_ROLE_ARN%"
+    gateway_jwt_signing_key:
+      value: "%GATEWAY_JWT_SIGNING_KEY%"
+    gateway_jwt_signing_pubkey:
+      value: "%GATEWAY_JWT_SIGNING_PUBKEY_B64%"
+
+    # --- Networking ----------------------------------------------------------
+    base_domain:
+      value: "%BASE_DOMAIN%"
+    service_type:
+      value: "LoadBalancer"
+    # Comma-joined EIP allocation IDs, one per public subnet — the lobby NLB
+    # annotation requires the counts to match or the controller rejects the
+    # Service and the app sits in "unavailable" forever.
+    aws_nlb_ip:
+      value: "%LOBBY_EIP_ALLOCATION_IDS%"
+
+    # --- Data stores (external RDS + ElastiCache, not the bundled ones) ------
+    enable_default_postgres:
+      value: "0"
+    enable_default_redis:
+      value: "0"
+    postgres_global_host:
+      value: "%RDS_HOST%"
+    postgres_global_port:
+      value: "%RDS_PORT%"
+    postgres_global_username:
+      value: "smallstep"
+    pg_require_tls:
+      value: "1"
+    redis_host:
+      value: "%REDIS_HOST%"
+    redis_port:
+      value: "%REDIS_PORT%"
+    redis_require_tls:
+      value: "1"
+    # Password read from the redis-auth secret (key "password") that the
+    # bootstrap job creates — see the header.
+    redis_auth_enabled:
+      value: "1"
+
+    # --- HTTPS ingress -------------------------------------------------------
+    cert_issuer:
+      value: "%CERT_ISSUER%"
+    technical_contact_email:
+      value: "%TECH_CONTACT%"
+    update_trust_bundle:
+      value: "%UPDATE_TRUST_BUNDLE%"
+
+    # --- Email (SES SMTP; password lives in the smtp secret) -----------------
+    email_from_name:
+      value: "%EMAIL_FROM_NAME%"
+    email_from_address:
+      value: "%EMAIL_FROM%"
+    email_smtp_host:
+      value: "%SMTP_HOST%"
+    email_smtp_port:
+      value: "%SMTP_PORT%"
+    email_smtp_username:
+      value: "%SMTP_USERNAME%"
+    # "0" = STARTTLS, not implicit TLS. modules/ses-smtp hardcodes SES port
+    # 587, which is STARTTLS-only; the app hands this value to nodemailer's
+    # `secure` option (implicit TLS), and an implicit-TLS handshake against
+    # 587 hangs. nodemailer upgrades via STARTTLS on its own when secure=0.
+    email_smtp_secure:
+      value: "0"
+
+    # --- Feature toggles, pinned to their defaults explicitly so a channel
+    # default change cannot switch one on; enable deliberately. ---
+    tunnel_enabled:
+      value: "0"
+    approvalq_enabled:
+      value: "0"
+    landlord_cache_mode_enabled:
+      value: "0"
+    radius_enabled:
+      value: "0"
+
+    # --- Observability -------------------------------------------------------
+    # Off unless you run an OpenTelemetry collector the platform can reach. To
+    # ship telemetry, add observability_enabled "1", observability_otlp_endpoint
+    # (the collector's in-cluster address, e.g. http://otel-collector.monitoring:4317)
+    # and observability_otlp_protocol "grpc".

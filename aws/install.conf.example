@@ -1,0 +1,23 @@
+# Identity of this deployment for the install tooling (Makefile + scripts).
+# Copy to install.conf and edit; it is gitignored. The first four values must
+# match what platform/terraform.tfvars was applied with — the scripts refuse
+# to render configuration when the Terraform outputs disagree.
+
+name        = "smallstep"
+account_id  = "<aws-account-id>"   # the scripts refuse any other account
+region      = "us-east-2"
+base_domain = "smallstep.example.com"
+
+# Kubernetes namespace the application installs into (platform's `namespace`).
+namespace = "smallstep"
+
+# The Smallstep team. The slug is permanent and appears in every CA URL.
+team_name = "Example Corp"
+team_slug = "example"
+
+# The slug of the Replicated channel your license is bound to — shown next to
+# the channel in the vendor portal. `kubectl kots install smallstep/<slug>`.
+replicated_channel_slug = "stable"
+
+# Registered with Let's Encrypt and shown to users as the platform contact.
+technical_contact_email = "ops@example.com"

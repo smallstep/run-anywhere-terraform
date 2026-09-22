@@ -1,0 +1,59 @@
+# Copy to terraform.tfvars and adjust.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# The defaults in variables.tf are the documented production posture; only
+# the first three values below have no default. The commented alternatives
+# are the evaluation posture: smaller, single-AZ, and destroyable without
+# leaving snapshots behind.
+
+name        = "smallstep"
+region      = "us-east-2"
+base_domain = "smallstep.example.com"
+
+# Operator networks allowed to reach the EKS API endpoint. No default on
+# purpose — put your current IP here (e.g. "203.0.113.7/32").
+api_public_access_cidrs = ["203.0.113.7/32"]
+
+# true = the API server is reachable only in-VPC; kubectl and kots then need
+# a bastion or VPN. false keeps the public endpoint, pinned to the CIDRs above.
+cluster_endpoint_private_only = false
+
+# Network. Either the module creates the VPC (default) ...
+create_vpc = true
+vpc_cidr   = "10.61.0.0/16"
+az_count   = 3
+# ... or it uses yours: one public and one private subnet per AZ, the private
+# ones with a route to the internet. Only the load balancer role tags are
+# written to them.
+# create_vpc         = false
+# vpc_id             = "vpc-0123456789abcdef0"
+# public_subnet_ids  = ["subnet-aaa", "subnet-bbb", "subnet-ccc"]
+# private_subnet_ids = ["subnet-ddd", "subnet-eee", "subnet-fff"]
+
+# Sizing. The defaults are the documented recommendation; an evaluation runs
+# on the commented values.
+# eks_node_desired   = 3
+# db_instance_class  = "db.t4g.medium"
+# db_multi_az        = false
+# redis_node_type    = "cache.t4g.small"
+# redis_multi_az     = false
+# single_nat_gateway = true
+
+# Destroyability. true (default): RDS deletion protection, a final snapshot on
+# destroy, 7-day secret recovery windows. false: `terraform destroy` removes
+# everything cleanly.
+# deletion_protection = false
+
+# cloudfront: a private bucket behind CloudFront with origin access (not
+# available in GovCloud). public-bucket: S3 website hosting with a public read
+# policy. Both serve http://crl.<base_domain>/.
+crl_mode = "cloudfront"
+
+# ses needs the SES identity verified (and sandbox limits recipients until
+# production access is granted); dummy boots the platform with email disabled.
+smtp_mode = "ses"
+
+# Bump to rotate every generated password (DB master, app user, redis AUTH,
+# and friends) — then re-run the workloads bootstrap job.
+db_password_version = 1

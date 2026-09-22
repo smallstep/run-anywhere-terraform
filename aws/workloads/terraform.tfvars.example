@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars and adjust.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# The only required value is the state bucket, which
+# the platform root was initialised with.
+
+state_bucket = "smallstep-tfstate-000000000000"
+state_region = "us-east-2"
