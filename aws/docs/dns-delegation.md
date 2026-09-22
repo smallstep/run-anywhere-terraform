@@ -23,17 +23,22 @@ Public resolution of the zone is load-bearing three times over:
   and produces the Let's Encrypt failure above.
 
 The sequence from `workloads-apply` onward runs without a natural pause, so
-the delegation gate sits between `platform-apply` and everything after it.
-Do it once, confirm it, forget it.
+the delegation gate sits early, and `make platform-dns` exists to put it
+there: it creates the zone on its own so you can delegate before the full
+apply needs the delegation to exist. Do it once, confirm it, forget it.
 
 ## The steps
 
-**1. Read the name servers Terraform assigned.** The zone must exist first,
-so this comes after `make platform-apply`:
+**1. Create the zone and read its name servers.** The zone has to exist
+first, and it is the only thing that has to:
 
 ```bash
-terraform -chdir=platform output route53_name_servers
+make platform-dns
 ```
+
+That applies the Route 53 zone alone and prints the four `awsdns-*` hosts.
+(Equivalently, `terraform -chdir=platform output route53_name_servers` once
+the zone is in state.)
 
 Four names, `awsdns-*` hosts.
 
@@ -65,6 +70,24 @@ When the NS and `app` queries answer, proceed. `make verify STAGE=dns`
 performs the same checks scripted. Propagation is usually under a minute for
 a fresh delegation. If you queried before delegating, the parent's NXDOMAIN
 answer may be cached for up to its negative TTL.
+
+## If an apply is already blocked on this
+
+With the default `crl_mode`, `make platform-apply` creates the zone and then
+waits on ACM validating the `crl.<base_domain>` certificate through DNS. If
+you started that apply before delegating, it is now sitting on
+`aws_acm_certificate_validation` and will do so until its 75-minute timeout.
+
+Leave it running and delegate now — it picks the change up within a couple of
+minutes. You cannot use `terraform output` to get the name servers while the
+apply holds the state lock; read them from the AWS console, or:
+
+```bash
+aws route53 list-hosted-zones-by-name --dns-name <base_domain> \
+  --query 'HostedZones[0].Id' --output text
+aws route53 get-hosted-zone --id <that-id> \
+  --query DelegationSet.NameServers --output text
+```
 
 ## Tearing down
 

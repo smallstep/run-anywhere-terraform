@@ -39,7 +39,7 @@ STAGE ?= platform
 .PHONY: help preflight fmt validate check \
         platform-init platform-plan platform-apply platform-destroy \
         workloads-init workloads-plan workloads-apply workloads-destroy \
-        state-bucket kubeconfig config-values kots-install kots-status kots-console \
+        state-bucket platform-dns kubeconfig config-values kots-install kots-status kots-console \
         dns-reconcile verify destroy-all
 
 help:
@@ -53,8 +53,10 @@ help:
 	@echo "Install path (order matters):"
 	@echo
 	@echo "  make state-bucket     one-time state bucket + backend.hcl for each root"
-	@echo "  make platform-{init,plan,apply,destroy}    AWS infrastructure (~25 min)"
-	@echo "  # delegate NS records for base_domain to the Route 53 zone, then:"
+	@echo "  make platform-init    initialise the platform root"
+	@echo "  make platform-dns     create the DNS zone only, and print its name servers"
+	@echo "  # delegate those name servers in the parent zone before continuing"
+	@echo "  make platform-{plan,apply,destroy}         AWS infrastructure (~25 min)"
 	@echo "  make kubeconfig       write the deployment-owned kubeconfig"
 	@echo "  make workloads-{init,plan,apply,destroy}   addons + bootstrap Job"
 	@echo "  make config-values    render KOTS ConfigValues from terraform outputs"
@@ -141,6 +143,24 @@ $(eval $(call tf_targets,workloads,$(WORKLOADS)))
 
 state-bucket:
 	scripts/bootstrap-state-bucket.sh
+
+# The Route 53 zone on its own, so its name servers can be delegated BEFORE the
+# full apply. With the default crl_mode = cloudfront, `platform-apply` creates
+# the zone and then blocks on ACM validating the CRL certificate through DNS —
+# a validation that cannot succeed until the parent zone delegates to it. The
+# apply would sit there for its 75-minute timeout with nothing to show for it,
+# and the state lock it holds means `terraform output` cannot even be used to
+# look the name servers up. Applying the zone first turns that deadlock into
+# two ordinary steps. Terraform warns that -target is for exceptional use;
+# bootstrapping a delegation is the exception.
+platform-dns:
+	terraform -chdir=$(PLATFORM) apply -target=module.dns.aws_route53_zone.this
+	@echo
+	@echo "Delegate these name servers for your base domain, in its PARENT zone:"
+	@terraform -chdir=$(PLATFORM) output -json route53_name_servers | jq -r '  .[]'
+	@echo
+	@echo "Confirm with:  dig +short NS <base_domain> @8.8.8.8"
+	@echo "Then continue: make platform-apply"
 
 kubeconfig:
 	scripts/kubeconfig.sh
