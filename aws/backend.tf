@@ -48,6 +48,13 @@ provider "aws" {
   region = var.region
 }
 
+# CloudFront attaches only ACM certificates that live in us-east-1, whatever
+# region the rest of the deployment uses. Used by cloudfront.tf alone.
+provider "aws" {
+  alias  = "use1"
+  region = "us-east-1"
+}
+
 provider "kubernetes" {
   host                   = aws_eks_cluster.eks.endpoint
   cluster_ca_certificate = base64decode(aws_eks_cluster.eks.certificate_authority[0].data)
@@ -68,6 +75,10 @@ data "aws_availability_zones" "available" {
 }
 
 data "aws_region" "current" {}
+
+data "aws_caller_identity" "current" {}
+
+data "aws_partition" "current" {}
 
 data "aws_subnet" "public" {
   count = length(var.subnets_public)

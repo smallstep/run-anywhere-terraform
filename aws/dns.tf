@@ -97,12 +97,20 @@ resource "aws_route53_record" "ocsp" {
   records = concat(aws_eip.cluster[*].public_ip)
 }
 
+# An alias, not a CNAME to the S3 REST endpoint: the REST endpoint does not
+# serve anonymous plain-HTTP GETs by hostname. The target follows crl_mode — the
+# bucket's website endpoint (whose virtual-hosted routing is why the bucket is
+# named crl.<base_domain>) or the CloudFront distribution. See s3.tf.
 resource "aws_route53_record" "crl" {
   zone_id = aws_route53_zone.cluster.id
   name    = "crl.${aws_route53_zone.cluster.name}"
-  ttl     = 300
-  type    = "CNAME"
-  records = ["crl.${aws_route53_zone.cluster.name}.s3.${var.region}.amazonaws.com."]
+  type    = "A"
+
+  alias {
+    name                   = local.crl_cloudfront ? one(aws_cloudfront_distribution.crl[*].domain_name) : one(aws_s3_bucket_website_configuration.veto_crls[*].website_domain)
+    zone_id                = local.crl_cloudfront ? one(aws_cloudfront_distribution.crl[*].hosted_zone_id) : aws_s3_bucket.veto_crls.hosted_zone_id
+    evaluate_target_health = false
+  }
 }
 
 resource "aws_route53_record" "scif" {

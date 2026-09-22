@@ -5,6 +5,21 @@
 # 
 #----------------------------------------------------------------------------------
 
+output "crl_bucket_name" {
+  description = "crl.<base_domain>. The application derives the same name from the base domain."
+  value       = aws_s3_bucket.veto_crls.bucket
+}
+
+output "crl_cloudfront_distribution_id" {
+  description = "The distribution serving the CRL when crl_mode = cloudfront (null otherwise), for `aws cloudfront create-invalidation` when a fresh CRL must reach every edge before the cache expires."
+  value       = one(aws_cloudfront_distribution.crl[*].id)
+}
+
+output "crl_url" {
+  description = "Plain HTTP in both modes; CRL clients do not speak TLS to the distribution point."
+  value       = "http://${trimsuffix(aws_route53_record.crl.name, ".")}"
+}
+
 output "eks_cluster_endpoint" {
   value = aws_eks_cluster.eks.endpoint
 }

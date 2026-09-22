@@ -244,6 +244,17 @@ variable "cluster_endpoint_private_only" {
   type        = bool
 }
 
+variable "crl_mode" {
+  default     = "cloudfront"
+  description = "How http://crl.<base_domain> is served (see s3.tf). cloudfront: the bucket stays private (Block Public Access on, SSE-KMS under a dedicated key) and a CloudFront distribution with Origin Access Control is its only reader; needs an ACM certificate in us-east-1, which this module creates. public-bucket: S3 website hosting with a public-read bucket policy and SSE-S3. Both serve plain HTTP, which CRL clients require."
+  type        = string
+
+  validation {
+    condition     = contains(["cloudfront", "public-bucket"], var.crl_mode)
+    error_message = "crl_mode must be cloudfront or public-bucket."
+  }
+}
+
 variable "node_root_volume_size" {
   default     = 100
   description = "Root volume size in GiB for worker nodes. Encrypted with the project KMS key via a launch template."
