@@ -1,6 +1,10 @@
 # Changelog
 
-## 2.0.0 (unreleased)
+Releases are git tags on this repository; reference one with `?ref=<version>`
+when consuming a module by source URL. 1.1.0 and 1.2.0 tag the flat `//aws`
+module; 2.0.0 is the `aws/platform` + `aws/workloads` layout.
+
+## 2.0.0 — 2026-09-22
 
 AWS. A new layout, not an in-place change: the flat `//aws` module is replaced
 by the `aws/platform` and `aws/workloads` roots and the modules under
@@ -16,7 +20,7 @@ The `1.1.0` and `1.2.0` tags remain for the flat module. See `aws/README.md`.
 - `deletion_protection` (default true) selects the production posture — RDS deletion protection, a final snapshot on destroy, 7-day secret recovery windows — or an evaluation posture that `terraform destroy` removes cleanly. Sizing defaults are the documented production values.
 - Removed: the YubiHSM PIN plumbing, the `*.logs` record, the ICMP security group rules module, the SCIM temporary key script, the `linkerd_inject` toggle, `k8s_kube_config_path` and the kubeconfig `local-exec`.
 
-## 1.2.0 (unreleased)
+## 1.2.0 — 2026-09-22
 
 AWS module. The CRL distribution point serves anonymous plain HTTP, which CRL
 clients require; it did not before. See `aws/README.md` "The CRL distribution
@@ -27,7 +31,7 @@ point" and "Upgrading from 1.1.x".
 - Bucket ACLs removed (they fail on buckets created since 2023); `BucketOwnerEnforced` ownership on both buckets. The access-log bucket uses SSE-S3 and policy-based delivery, without which S3 delivers no logs.
 - Outputs `crl_bucket_name`, `crl_url`, `crl_cloudfront_distribution_id`.
 
-## 1.1.0 (unreleased)
+## 1.1.0 — 2026-09-22
 
 AWS module. In-place fixes; no resource addresses change. See `aws/README.md`
 "Upgrading from 1.0.x" for the changes that touch running infrastructure.
