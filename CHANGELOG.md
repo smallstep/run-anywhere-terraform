@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 (unreleased)
+
+AWS module. The CRL distribution point serves anonymous plain HTTP, which CRL
+clients require; it did not before. See `aws/README.md` "The CRL distribution
+point" and "Upgrading from 1.1.x".
+
+- `crl_mode`: `cloudfront` (default) keeps the bucket private behind a CloudFront distribution with Origin Access Control, a dedicated KMS key, and an ACM certificate in us-east-1; `public-bucket` is S3 website hosting with a public-read policy and SSE-S3.
+- `crl.<base_domain>` is an alias record to the distribution or the website endpoint, not a CNAME to the S3 REST endpoint.
+- Bucket ACLs removed (they fail on buckets created since 2023); `BucketOwnerEnforced` ownership on both buckets. The access-log bucket uses SSE-S3 and policy-based delivery, without which S3 delivers no logs.
+- Outputs `crl_bucket_name`, `crl_url`, `crl_cloudfront_distribution_id`.
+
 ## 1.1.0 (unreleased)
 
 AWS module. In-place fixes; no resource addresses change. See `aws/README.md`

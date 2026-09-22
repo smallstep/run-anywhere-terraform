@@ -18,7 +18,7 @@ You may instead pass in these values directly to the module block, but the above
 
 Once the module has been set up, you should confirm each secret's value in the SecretsManager console. If incorrect, you can fix the secret directly in the console without disrupting the Terraform module.
 
-After completion, Terraform will have stood up and configured an RDS Aurora PostgreSQL cluster, an EKS cluster, a Redis instance with AUTH enabled, one Elastic IP per public subnet (later used to create the NLB), DNS resources, the KMS keys (a symmetric key for encryption and a P-256 key the gateway signs API tokens with), and all secrets stored in SecretsManager. Additionally, it will have tagged all subnets involved to allow EKS to attach to the private subnets and our NLB to attach to the public subnets.
+After completion, Terraform will have stood up and configured an RDS Aurora PostgreSQL cluster, an EKS cluster, a Redis instance with AUTH enabled, one Elastic IP per public subnet (later used to create the NLB), DNS resources, the CRL distribution point (see below), the KMS keys (a symmetric key for encryption and a P-256 key the gateway signs API tokens with), and all secrets stored in SecretsManager. Additionally, it will have tagged all subnets involved to allow EKS to attach to the private subnets and our NLB to attach to the public subnets.
 
 The module does **not** create the platform's PostgreSQL databases. Create them on the Aurora cluster before installing the application; the install documentation lists them.
 
@@ -47,7 +47,7 @@ variable "yubihsm_pin" {
 }
 
 module "run_anywhere" {
-  source = "github.com/smallstep/run-anywhere-terraform.git//aws?ref=1.1.0"
+  source = "github.com/smallstep/run-anywhere-terraform.git//aws?ref=1.2.0"
 
   base_domain                 = "your_domain.com"
   default_name                = "smallstep-prod"
@@ -65,6 +65,7 @@ module "run_anywhere" {
   # rds_engine_version            = "16.4"   # Aurora PostgreSQL; the platform requires 14 or newer
   # cluster_endpoint_private_only = false    # true: API server reachable only from the VPC
   # linkerd_inject                = false    # the current release needs no service mesh
+  # crl_mode                      = "cloudfront"  # or "public-bucket"; see "The CRL distribution point"
 }
 ```
 
@@ -82,6 +83,25 @@ The Replicated (KOTS) configuration takes these values verbatim:
 | `rds_cluster_endpoint`, `rds_cluster_port` | the database host and port; the cluster requires TLS (`rds.force_ssl=1`), so set the PostgreSQL TLS option |
 
 Secrets the module places in the `smallstep` namespace: `auth`, `postgresql`, `redis-auth`, `smtp`, `oidc`, `private-issuer`, `majordomo-provisioner-password`, `missioncontrol-provisioner-password`, `scim-server-secrets`, and `yubihsm2-pin` when enabled.
+
+#### The CRL distribution point
+
+Every certificate the platform issues names `http://crl.<base_domain>/<file>` as its CRL Distribution Point, and the platform writes those files to the bucket `crl.<base_domain>` (it derives the name from the base domain; it is not configurable). Validators fetch the URL anonymously over plain HTTP — a client cannot be required to complete a TLS handshake to check revocation of the certificate the handshake depends on — so the bucket must answer anonymous plain-HTTP GETs. `crl_mode` selects how:
+
+- **`cloudfront`** (default): the bucket stays private — Block Public Access on, objects encrypted under a dedicated KMS key — and a CloudFront distribution with Origin Access Control is its only reader. The module creates the distribution, an ACM certificate for `crl.<base_domain>` in us-east-1 (the only region CloudFront accepts certificates from; the module carries its own `us-east-1` provider configuration for this), and the DNS validation records. **The apply blocks on certificate validation until the zone is delegated from its parent.** A freshly published CRL reaches every edge once the cache expires; CRLs carry their own freshness (`nextUpdate`), so that is normally fine, and `aws cloudfront create-invalidation --distribution-id $(terraform output -raw crl_cloudfront_distribution_id) --paths '/*'` is the manual override.
+- **`public-bucket`**: S3 website hosting with a public-read bucket policy and SSE-S3. The one deliberately public bucket in the deployment; objects are served the moment they are written. Not available if the account-level S3 Block Public Access setting is on.
+
+Both modes serve the same `crl_url` output. CloudFront is not available in every partition (it is absent from AWS GovCloud); use `public-bucket` there.
+
+#### Upgrading from 1.1.x
+
+1.2.0 changes the CRL bucket and its DNS record. Previously the bucket was private with SSE-KMS under the project key and `crl.<base_domain>` was a CNAME to the S3 REST endpoint, so anonymous CRL fetches failed and revocation checking never happened.
+
+- **Pick `crl_mode` before applying.** The default, `cloudfront`, creates a distribution, an ACM certificate in us-east-1 and a second KMS key, and the apply waits for DNS validation of the certificate. `public-bucket` makes the bucket public.
+- **`crl.<base_domain>` is replaced**: the CNAME becomes an alias record (a type change replaces the record). Expect a short window where the name does not resolve.
+- **Objects written before the upgrade stay encrypted under the project key** and are not readable in either mode until rewritten. The platform republishes its CRLs on its next cycle; to serve them immediately, re-encrypt in place: `aws s3 cp --recursive s3://crl.<base_domain>/ s3://crl.<base_domain>/`.
+- **ACLs are gone.** Both buckets move to `BucketOwnerEnforced` ownership and the two `aws_s3_bucket_acl` resources are removed from configuration (a no-op on the buckets). Access logging is authorized by bucket policy instead, and the log bucket switches to SSE-S3, which is the only encryption S3 will deliver access logs to.
+- New outputs: `crl_bucket_name`, `crl_url`, `crl_cloudfront_distribution_id`.
 
 #### Upgrading from 1.0.x
 
