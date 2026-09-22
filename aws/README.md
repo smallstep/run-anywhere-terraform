@@ -54,32 +54,52 @@ it is; every root's `variables.tf` documents its inputs, and
 Everything runs from `aws/` through the Makefile; `make help` lists the
 targets in this order.
 
+All AWS credentials come from the environment — these commands use whatever
+`aws sts get-caller-identity` resolves to, so select your account first
+(`export AWS_PROFILE=…`, or any other mechanism the AWS CLI supports).
+`make preflight` refuses to continue if that account is not the one in
+`install.conf`.
+
 ```shell
+export AWS_PROFILE=<your-profile>                 # or any AWS credential source
 cp install.conf.example install.conf              # name, account, region, domain, team, channel slug
 cp platform/terraform.tfvars.example platform/terraform.tfvars    # the same name/region/domain, your operator CIDRs
-cp workloads/terraform.tfvars.example workloads/terraform.tfvars  # the state bucket
-cp env.example .env                               # filled in at step 8
+cp env.example .env                               # filled in at step 9
 make preflight
 ```
 
-1. `make state-bucket` — one-time state bucket; writes each root's `backend.hcl`.
-2. `make platform-init && make platform-apply` — AWS infrastructure (about
-   25 minutes).
-3. **Delegate the zone**: add the NS record for `base_domain` in its parent
-   (`terraform -chdir=platform output route53_name_servers`) and confirm with
-   `make verify STAGE=dns` before continuing. See `docs/dns-delegation.md`;
-   in the default `crl_mode` the platform apply itself waits on it.
-4. `make kubeconfig` — writes a kubeconfig that names only this cluster;
+1. `make state-bucket` — one-time state bucket; writes each root's
+   `backend.hcl` and prints the bucket name, which is
+   `<name>-tfstate-<account-id>`.
+2. `cp workloads/terraform.tfvars.example workloads/terraform.tfvars` and set
+   `state_bucket` to that name.
+3. `make platform-init`, then **`make platform-dns`** — creates the Route 53
+   zone on its own and prints its four name servers.
+4. **Delegate the zone**: add an NS record for `base_domain` in its parent
+   zone with those name servers, and confirm it answers publicly
+   (`dig +short NS <base_domain> @8.8.8.8`) before continuing. See
+   `docs/dns-delegation.md`. **Do not skip ahead**: with the default
+   `crl_mode`, the next step blocks until this delegation resolves.
+5. `make platform-apply` — the rest of the AWS infrastructure, about 25
+   minutes. Terraform prompts for confirmation before it starts.
+6. `make kubeconfig` — writes a kubeconfig that names only this cluster;
    every script and target reads the cluster through it.
-5. `make workloads-init && make workloads-apply` — cluster addons and the
+7. `make workloads-init && make workloads-apply` — cluster addons and the
    bootstrap Job. `make verify STAGE=cluster` afterwards.
-6. `make config-values` — render the KOTS configuration from Terraform
+8. `make config-values` — render the KOTS configuration from Terraform
    outputs and `install.conf`.
-7. `make kots-install` — headless install from your channel (20–30 minutes to
+9. `make kots-install` — headless install from your channel (20–30 minutes to
    full rollout), then `make dns-reconcile` to point `control.infra.<base_domain>`
    at the agent control plane's load balancer the install created.
-8. Sign in to the dashboard, mint an API token (Settings → API Tokens) into
-   `.env`, then `make verify STAGE=app`.
+10. Sign in to the dashboard, mint an API token (Settings → API Tokens) into
+    `.env`, then `make verify STAGE=app`.
+
+> **Already started a `platform-apply` that is sitting on
+> `aws_acm_certificate_validation`?** That is this deadlock. The apply holds
+> the state lock, so `terraform output` will not answer — read the name
+> servers from the AWS console, or with
+> `aws route53 get-hosted-zone --id <id> --query DelegationSet.NameServers`,
+> and delegate them. The apply picks it up within a couple of minutes.
 
 `make verify STAGE=<platform|dns|cluster|app>` checks each stage against what
 the configuration says should exist; use it after every step and after every
