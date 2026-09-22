@@ -1,9 +1,3 @@
-variable "name" {
-  description = "Deployment name; the same value platform was applied with."
-  type        = string
-  default     = "smallstep"
-}
-
 variable "state_bucket" {
   description = "The Terraform state bucket; this root reads platform's outputs from it."
   type        = string

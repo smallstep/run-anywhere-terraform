@@ -11,6 +11,7 @@ by the `aws/platform` and `aws/workloads` roots and the modules under
 `aws/modules`. No state migration; a 2.0.0 deployment is a new deployment.
 The `1.1.0` and `1.2.0` tags remain for the flat module. See `aws/README.md`.
 
+- `make platform-dns` creates the Route 53 zone on its own and prints its name servers, so the zone is delegated *before* the main apply needs that delegation to exist. With the default `crl_mode`, `platform-apply` otherwise blocks on ACM validating the CRL certificate against a zone nobody has delegated yet.
 - Two roots: `platform` (AWS only) and `workloads` (Kubernetes only, reading `platform`'s outputs through remote state), because a provider cannot be configured from a resource in the same apply. Terraform `>= 1.11`.
 - Plain RDS PostgreSQL 16 instead of Aurora, `rds.force_ssl` and logical replication on; Redis AUTH with `ROTATE`.
 - The platform's databases and Kubernetes secrets are created by an in-cluster bootstrap Job reading Secrets Manager under IRSA; no secret value passes through Terraform or state. Passwords are generated with ephemeral resources and write-only arguments; `db_password_version` rotates them together.
