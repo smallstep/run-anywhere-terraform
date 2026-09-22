@@ -3,6 +3,10 @@
 # the KOTS ConfigValues are rendered from `terraform output -json` (the README
 # maps outputs to configuration items).
 
+output "name" {
+  value = var.name
+}
+
 output "region" {
   value = var.region
 }

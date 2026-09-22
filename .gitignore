@@ -10,3 +10,9 @@ crash.log
 backend.hcl
 *.tfvars
 !*.tfvars.example
+
+# Install tooling: per-deployment identity and secrets, rendered artifacts.
+install.conf
+.env
+aws/kots/generated/
+aws/build/
