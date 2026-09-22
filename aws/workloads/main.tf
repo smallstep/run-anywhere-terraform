@@ -19,6 +19,10 @@ data "terraform_remote_state" "platform" {
 }
 
 locals {
+  # Everything this root needs about the platform comes from its outputs,
+  # including the deployment name: duplicating it as a variable here only
+  # created a value an operator could set differently from the one platform
+  # was applied with, and nothing would have said so.
   p = data.terraform_remote_state.platform.outputs
 }
 
@@ -27,7 +31,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      deployment = var.name
+      deployment = local.p.name
       managed-by = "terraform"
       tf-root    = "workloads"
     }
@@ -64,7 +68,7 @@ provider "helm" {
 module "cluster_addons" {
   source = "../modules/cluster-addons"
 
-  name                        = var.name
+  name                        = local.p.name
   region                      = local.p.region
   cluster_name                = local.p.eks_cluster_name
   vpc_id                      = local.p.vpc_id
@@ -79,7 +83,7 @@ module "cluster_addons" {
 module "smallstep_bootstrap" {
   source = "../modules/smallstep-bootstrap"
 
-  name               = var.name
+  name               = local.p.name
   region             = local.p.region
   namespace          = local.p.namespace
   bootstrap_role_arn = local.p.bootstrap_role_arn
