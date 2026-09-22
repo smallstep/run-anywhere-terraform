@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.0 (unreleased)
+
+AWS. A new layout, not an in-place change: the flat `//aws` module is replaced
+by the `aws/platform` and `aws/workloads` roots and the modules under
+`aws/modules`. No state migration; a 2.0.0 deployment is a new deployment.
+The `1.1.0` and `1.2.0` tags remain for the flat module. See `aws/README.md`.
+
+- Two roots: `platform` (AWS only) and `workloads` (Kubernetes only, reading `platform`'s outputs through remote state), because a provider cannot be configured from a resource in the same apply. Terraform `>= 1.11`.
+- Plain RDS PostgreSQL 16 instead of Aurora, `rds.force_ssl` and logical replication on; Redis AUTH with `ROTATE`.
+- The platform's databases and Kubernetes secrets are created by an in-cluster bootstrap Job reading Secrets Manager under IRSA; no secret value passes through Terraform or state. Passwords are generated with ephemeral resources and write-only arguments; `db_password_version` rotates them together.
+- `helm_release` for the AWS Load Balancer Controller (pinned chart), EKS managed EBS CSI addon with its own IRSA role, gp3 default StorageClass encrypted with the platform key, Fluent Bit -> CloudWatch (`enable_logging`). Replaces `local-exec`, the helm CLI and `kubectl apply` from a floating ref.
+- `create_vpc`: the module creates the VPC (three AZs, NAT per AZ, S3 gateway endpoint) or takes `vpc_id`/`public_subnet_ids`/`private_subnet_ids`, writing only the load balancer role tags to them.
+- Explicit KMS key policy (root delegation, ViaService for the data services, a separate grant statement, CloudWatch Logs with EncryptionContext); a P-256 gateway JWT key.
+- `deletion_protection` (default true) selects the production posture — RDS deletion protection, a final snapshot on destroy, 7-day secret recovery windows — or an evaluation posture that `terraform destroy` removes cleanly. Sizing defaults are the documented production values.
+- Removed: the YubiHSM PIN plumbing, the `*.logs` record, the ICMP security group rules module, the SCIM temporary key script, the `linkerd_inject` toggle, `k8s_kube_config_path` and the kubeconfig `local-exec`.
+
 ## 1.2.0 (unreleased)
 
 AWS module. The CRL distribution point serves anonymous plain HTTP, which CRL

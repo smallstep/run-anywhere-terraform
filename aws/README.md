@@ -1,129 +1,190 @@
 ## AWS
 
+Everything Smallstep Run Anywhere needs on AWS, in two Terraform roots
+applied in order, and the modules they are built from.
+
+```
+aws/
+  platform/    everything AWS: VPC (or yours), EKS, RDS PostgreSQL, ElastiCache Redis,
+               KMS, Route 53, the CRL distribution point, SES SMTP, Secrets Manager
+  workloads/   everything Kubernetes: the AWS Load Balancer Controller, a gp3 default
+               StorageClass, Fluent Bit -> CloudWatch, and the bootstrap Job that creates
+               the platform's databases and Kubernetes secrets
+  modules/     network, dns, kms, eks, data, crl-bucket, iam-app, ses-smtp,
+               cluster-addons, smallstep-bootstrap
+```
+
+Two roots because the Kubernetes and Helm providers in `workloads` are
+configured from the cluster `platform` creates, and a provider cannot be
+configured from a resource in the same apply. Each root has its own state and
+is applied independently; `workloads` reads `platform`'s outputs through
+remote state. Every module's header comment records why it is shaped the way
+it is; every root's `variables.tf` documents its inputs, and
+`terraform.tfvars.example` shows the values to set.
+
 #### Requirements
 
-[`step`](https://github.com/smallstep/cli)
+- **Terraform >= 1.11**: S3-native state locking, write-only arguments and
+  ephemeral resources (passwords are generated without ever landing in state).
+- [`aws`](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html),
+  [`kubectl`](https://kubernetes.io/docs/tasks/tools/) with the
+  [kots plugin](https://docs.replicated.com/reference/kots-cli-getting-started),
+  [`helm`](https://helm.sh/docs/helm/helm_install/).
+- **A DNS zone you can delegate.** The platform is served under `base_domain`;
+  its parent zone must carry an NS record for it before the application is
+  installed. Let's Encrypt, the CloudFront certificate in the default CRL
+  mode, and the application's preflights all resolve the names publicly.
+- **An S3 bucket for state**, created once by hand with versioning on and
+  Block Public Access on. Locking is S3-native (`use_lockfile`); no DynamoDB
+  table. Each root's `backend.hcl.example` shows the backend configuration.
 
-[`aws`](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+#### Order of operations
 
-[`helm`](https://helm.sh/docs/helm/helm_install/)
+```shell
+# 1. platform — about 25 minutes
+cd aws/platform
+cp backend.hcl.example backend.hcl            # set the bucket
+cp terraform.tfvars.example terraform.tfvars  # set name, region, base_domain, your operator CIDRs
+terraform init -backend-config=backend.hcl
+terraform apply
 
-#### Secret management
+# 2. delegate the zone in its parent, then confirm before continuing
+terraform output route53_name_servers
+dig NS <base_domain>
 
-Terraform will need some secrets for various pieces of your infrastructure. Some of these secrets must be manually entered and others will be auto-generated. All secrets are stored in AWS SecretsManager, encrypted by AWS KMS, and referenced by the Terraform state. Terraform will also automatically apply these secrets to your kubernetes cluster where needed.
+# 3. workloads — cluster addons and the bootstrap Job
+cd ../workloads
+cp backend.hcl.example backend.hcl            # same bucket, key workloads.tfstate
+cp terraform.tfvars.example terraform.tfvars  # the state bucket platform used
+aws eks update-kubeconfig --name <name> --region <region>
+terraform init -backend-config=backend.hcl
+terraform apply
 
-On first apply, make sure to pass in the values of the following two variables to create the secrets for your private issuer password and SMTP password. Our recommendation is creating two high-level variables with a default value of an empty string to pass into the module block; subsequently, you can pass in the actual secrets during your first Terraform apply of the module. Both variables are marked "secret" in Terraform to avoid leaking them in Terraform's responses on the command line, and we recommend passing the command line `HISTCONTROL=ignorespace` before running your apply to prevent leaking secrets into your session history. (If you are using a YubiHSM2 and have set the value of `hsm_enabled = true`, also pass in the HSM PIN code in hexadecimal and password to variable `yubihsm_pin`. For example, authentication key id `0x0001` with password `password` would follow the form: -var yubihsm_pin="0001password")
-
-You may instead pass in these values directly to the module block, but the above method will prevent these secrets from being written to your source control. All related resources are configured to ignore changes, so it won't matter that these values will not be passed in for subsequent Terraform applies.
-
-Once the module has been set up, you should confirm each secret's value in the SecretsManager console. If incorrect, you can fix the secret directly in the console without disrupting the Terraform module.
-
-After completion, Terraform will have stood up and configured an RDS Aurora PostgreSQL cluster, an EKS cluster, a Redis instance with AUTH enabled, one Elastic IP per public subnet (later used to create the NLB), DNS resources, the CRL distribution point (see below), the KMS keys (a symmetric key for encryption and a P-256 key the gateway signs API tokens with), and all secrets stored in SecretsManager. Additionally, it will have tagged all subnets involved to allow EKS to attach to the private subnets and our NLB to attach to the public subnets.
-
-The module does **not** create the platform's PostgreSQL databases. Create them on the Aurora cluster before installing the application; the install documentation lists them.
-
-#### Example module instantiation
-
-```terraform
-variable "private_issuer_password" {
-  default     = ""
-  description = "Private issuer password used for the `run anywhere` deployment, set during first module apply and left blank otherwise."
-  type        = string
-  sensitive   = true
-}
-
-variable "smtp_password" {
-  default     = ""
-  description = "SMTP password used for the `run anywhere` deployment, set during first module apply and left blank otherwise."
-  type        = string
-  sensitive   = true
-}
-
-variable "yubihsm_pin" {
-  default     = ""
-  description = "YubiHSM PIN followed by password for the `run anywhere` deployment, set during first module apply and left blank otherwise."
-  type        = string
-  sensitive   = true
-}
-
-module "run_anywhere" {
-  source = "github.com/smallstep/run-anywhere-terraform.git//aws?ref=1.2.0"
-
-  base_domain                 = "your_domain.com"
-  default_name                = "smallstep-prod"
-  private_issuer_password     = var.private_issuer_password
-  region                      = "us-west-1"
-  smtp_password               = var.smtp_password
-  subnets_public              = ["subnet-abskd939", "subnet-283kdjjd9"]
-  subnets_private             = ["subnet-d7ddd333b3", "subnet-abscd303"]
-  vpc                         = "vpc-89d606ae"
-  security_groups_cidr_blocks = ["192.168.71.100/32"]   # operator ranges; required unless the endpoint is private-only
-  yubihsm_enabled             = true
-  yubihsm_pin                 = var.yubihsm_pin
-
-  # eks_version                   = "1.31"   # pinned; set to your cluster's current version when adopting the module
-  # rds_engine_version            = "16.4"   # Aurora PostgreSQL; the platform requires 14 or newer
-  # cluster_endpoint_private_only = false    # true: API server reachable only from the VPC
-  # linkerd_inject                = false    # the current release needs no service mesh
-  # crl_mode                      = "cloudfront"  # or "public-bucket"; see "The CRL distribution point"
-}
+# 4. install the application from your Replicated channel with the
+#    configuration below, then point control.infra.<base_domain> at the
+#    mission-control load balancer the install creates.
 ```
+
+Delegation gates step 3 onwards: in the default `crl_mode`, `platform`'s
+apply blocks on ACM DNS validation until the zone resolves, and the
+application's install cannot issue its certificates without it.
+
+#### What the roots leave in place
+
+**platform** creates the VPC (three AZs, one NAT gateway per AZ, an S3
+gateway endpoint) or takes yours (`create_vpc = false` with `vpc_id`,
+`public_subnet_ids`, `private_subnet_ids`; only the load balancer role tags
+are written to them); an EKS cluster with a managed node group from a launch
+template (encrypted gp3 roots, IMDSv2), IRSA roles for the EBS CSI driver,
+the load balancer controller, Fluent Bit and the bootstrap Job, and the
+shared application role every platform service account assumes; RDS
+PostgreSQL 16 and ElastiCache Redis, both encrypted under the platform KMS
+key, TLS required, Redis AUTH on; a second, P-256 KMS key the gateway signs
+API tokens with; the public Route 53 zone and every platform hostname
+answering with the pre-allocated lobby EIPs (one per public subnet — the
+application's NLB annotation requires the counts to match); the CRL
+distribution point (below); SES SMTP; and every generated secret in Secrets
+Manager under `<name>/app/*`, written with write-only arguments so no
+password is ever in state. Bumping `db_password_version` rotates the generated
+passwords in one apply.
+
+**workloads** installs the AWS Load Balancer Controller (the application's
+lobby Service is annotated for this controller and no other; without it the
+Service never gets an address), a gp3 default StorageClass encrypted with the
+platform key with EKS's gp2 demoted, Fluent Bit shipping container logs to a
+CloudWatch log group `platform` created (`enable_logging`), and the bootstrap
+Job. The Job runs in-cluster under its own IRSA role, reads the secrets from
+Secrets Manager, creates the application role `smallstep` and the databases
+`bouncer`, `gateway`, `guardian`, `inventory`, `mission_control` and
+`landlord` (the application creates the rest at first boot), the
+`landlordcachesrv` replication role, generates the OIDC JWKS, and creates the
+Kubernetes secrets the application mounts: `auth`, `postgresql`, `redis`,
+`redis-auth`, `private-issuer`, `smtp`, `majordomo-provisioner-password`,
+`missioncontrol-provisioner-password`, `oidc`, `scim-server-secrets`,
+`postgresql-landlordcachesrv`. Secrets never pass through Terraform.
+
+What is deliberately not installed: cert-manager, ingress-nginx,
+trust-manager and the Smallstep issuer are bundled in the application release,
+and installing them a second time fights the bundled copies over CRDs and
+webhooks. No service mesh; the current release needs none.
 
 #### Outputs the application configuration uses
 
-The Replicated (KOTS) configuration takes these values verbatim:
+The Replicated (KOTS) configuration takes these `platform` outputs verbatim:
 
 | Output | KOTS config item |
 |---|---|
-| `iam_service_account_arn` | `aws_cluster_iam_role` — the role every platform service account assumes |
+| `base_domain` | `base_domain` |
+| `region` | `aws_region` (with `cloud_provider = aws`, `key_signer = kms`) |
+| `app_iam_role_arn` | `aws_cluster_iam_role` — the role every platform service account assumes |
 | `gateway_jwt_signing_key` | `gateway_jwt_signing_key` (`awskms:key-id=…`) |
 | `gateway_jwt_signing_pubkey_b64` | `gateway_jwt_signing_pubkey` |
-| `route53_gateway_domain` | the REST/GraphQL API host, `gateway.<base>` — not `gateway.api.<base>`, which is the web application's own ingress |
-| `redis_auth_secret_arn` | the Redis AUTH token; the same value is placed in the `redis-auth` Kubernetes secret, so set `redis_auth_enabled` and `redis_require_tls` |
-| `rds_cluster_endpoint`, `rds_cluster_port` | the database host and port; the cluster requires TLS (`rds.force_ssl=1`), so set the PostgreSQL TLS option |
+| `lobby_eip_allocation_ids` | `aws_nlb_ip`, comma-joined — the lobby NLB's static addresses |
+| `rds_host`, `rds_port` | the PostgreSQL host and port, with the TLS option on (`rds.force_ssl = 1` is enforced) and the bundled PostgreSQL off |
+| `redis_host`, `redis_port` | the Redis host and port, with TLS and AUTH on and the bundled Redis off |
+| `smtp_host`, `smtp_port`, `smtp_username` | the SMTP settings; the password is in the `smtp` secret |
 
-Secrets the module places in the `smallstep` namespace: `auth`, `postgresql`, `redis-auth`, `smtp`, `oidc`, `private-issuer`, `majordomo-provisioner-password`, `missioncontrol-provisioner-password`, `scim-server-secrets`, and `yubihsm2-pin` when enabled.
+Secret-typed configuration items are left unset: the bootstrap Job has
+already created the Kubernetes secrets the application mounts. The CRL bucket
+name and URL are derived by the application from `base_domain`; they are
+outputs here (`crl_bucket_name`, `crl_url`) for verification, not for
+configuration.
 
 #### The CRL distribution point
 
-Every certificate the platform issues names `http://crl.<base_domain>/<file>` as its CRL Distribution Point, and the platform writes those files to the bucket `crl.<base_domain>` (it derives the name from the base domain; it is not configurable). Validators fetch the URL anonymously over plain HTTP — a client cannot be required to complete a TLS handshake to check revocation of the certificate the handshake depends on — so the bucket must answer anonymous plain-HTTP GETs. `crl_mode` selects how:
+Every certificate the platform issues names `http://crl.<base_domain>/<file>`
+as its CRL Distribution Point, and the platform writes those files to the
+bucket `crl.<base_domain>`. Validators fetch that URL anonymously over plain
+HTTP, so the bucket must answer anonymous plain-HTTP GETs. `crl_mode`
+selects how:
 
-- **`cloudfront`** (default): the bucket stays private — Block Public Access on, objects encrypted under a dedicated KMS key — and a CloudFront distribution with Origin Access Control is its only reader. The module creates the distribution, an ACM certificate for `crl.<base_domain>` in us-east-1 (the only region CloudFront accepts certificates from; the module carries its own `us-east-1` provider configuration for this), and the DNS validation records. **The apply blocks on certificate validation until the zone is delegated from its parent.** A freshly published CRL reaches every edge once the cache expires; CRLs carry their own freshness (`nextUpdate`), so that is normally fine, and `aws cloudfront create-invalidation --distribution-id $(terraform output -raw crl_cloudfront_distribution_id) --paths '/*'` is the manual override.
-- **`public-bucket`**: S3 website hosting with a public-read bucket policy and SSE-S3. The one deliberately public bucket in the deployment; objects are served the moment they are written. Not available if the account-level S3 Block Public Access setting is on.
+- **`cloudfront`** (default): the bucket stays private — Block Public Access
+  on, objects under a dedicated KMS key — and a CloudFront distribution with
+  Origin Access Control is its only reader. The ACM certificate lives in
+  us-east-1 (the only region CloudFront accepts certificates from; the root
+  carries a second provider configuration for it). A freshly published CRL
+  reaches every edge once the cache expires; CRLs carry their own freshness,
+  and `aws cloudfront create-invalidation --paths '/*'` is the override.
+  Not available in AWS GovCloud.
+- **`public-bucket`**: S3 website hosting with a public-read policy and
+  SSE-S3 — the one deliberately public bucket in the deployment. Not
+  available if the account-level S3 Block Public Access setting is on.
 
-Both modes serve the same `crl_url` output. CloudFront is not available in every partition (it is absent from AWS GovCloud); use `public-bucket` there.
+#### Posture
 
-#### Upgrading from 1.1.x
+The defaults are the documented production posture: six `m6i.xlarge`
+workers, `db.m6i.large` Multi-AZ, `cache.m6g.large` Multi-AZ, a NAT gateway
+per AZ, and `deletion_protection = true` (RDS deletion protection, a final
+snapshot on destroy, 7-day recovery windows on secrets). An evaluation runs
+on the smaller values commented in `terraform.tfvars.example` with
+`deletion_protection = false`, which lets `terraform destroy` remove
+everything cleanly.
 
-1.2.0 changes the CRL bucket and its DNS record. Previously the bucket was private with SSE-KMS under the project key and `crl.<base_domain>` was a CNAME to the S3 REST endpoint, so anonymous CRL fetches failed and revocation checking never happened.
+Whatever the posture, the CA signing keys the platform creates inside KMS at
+runtime are not managed by Terraform and survive a destroy; find them by alias
+in the KMS console and schedule their deletion deliberately — that is what
+destroys the CA.
 
-- **Pick `crl_mode` before applying.** The default, `cloudfront`, creates a distribution, an ACM certificate in us-east-1 and a second KMS key, and the apply waits for DNS validation of the certificate. `public-bucket` makes the bucket public.
-- **`crl.<base_domain>` is replaced**: the CNAME becomes an alias record (a type change replaces the record). Expect a short window where the name does not resolve.
-- **Objects written before the upgrade stay encrypted under the project key** and are not readable in either mode until rewritten. The platform republishes its CRLs on its next cycle; to serve them immediately, re-encrypt in place: `aws s3 cp --recursive s3://crl.<base_domain>/ s3://crl.<base_domain>/`.
-- **ACLs are gone.** Both buckets move to `BucketOwnerEnforced` ownership and the two `aws_s3_bucket_acl` resources are removed from configuration (a no-op on the buckets). Access logging is authorized by bucket policy instead, and the log bucket switches to SSE-S3, which is the only encryption S3 will deliver access logs to.
-- New outputs: `crl_bucket_name`, `crl_url`, `crl_cloudfront_distribution_id`.
+#### Upgrading from 1.x
 
-#### Upgrading from 1.0.x
+2.0.0 is a different layout, not an in-place change: the flat `//aws` module
+is replaced by the `platform` and `workloads` roots and the modules under
+`aws/modules`. There is no state migration; a 2.0.0 deployment is a new
+deployment. The `1.1.0` and `1.2.0` tags remain for the flat module.
 
-1.1.0 changes existing infrastructure. Read this before `terraform apply`:
-
-- **Set `eks_version` and `rds_engine_version` to your current versions** before applying. Both were previously unpinned or lower; the new defaults (`"1.31"`, `"16.4"`) would otherwise plan a cluster upgrade. `rds_engine_version` is now a string.
-- **The node group is replaced.** Worker nodes now come from a launch template (encrypted root volumes, IMDSv2). EKS rolls the nodes; plan for a maintenance window.
-- **Redis gains an AUTH token** (`ROTATE` strategy, applied in place). The platform must be configured to present it — enable Redis AUTH in the application configuration and use the `redis-auth` secret this module creates — or it will be unable to connect once the token is required.
-- **PostgreSQL requires TLS** (`rds.force_ssl = 1`). Enable the PostgreSQL TLS option in the application configuration.
-- **`security_groups_cidr_blocks` is required** unless `cluster_endpoint_private_only = true`. An empty list with a public endpoint is refused.
-- **The Linkerd injection annotation is off by default** (`linkerd_inject = false`). Set it to `true` only if you run Linkerd deliberately.
-- **The service-account role now trusts every service account in the namespace**, not only `landlord` — the release annotates several service accounts with this role.
-- **The application IAM policy is corrected**: `kms:CreateKey` on `*` (it cannot be resource-scoped) and S3 object actions on `<bucket>/*`. Both grants were previously unusable.
-- New DNS records: `att`, `gateway`, `approvalq.infra`, `river.infra`. New Kubernetes secrets: `missioncontrol-provisioner-password`, `redis-auth`.
-
-#### Initialize and apply
-
-```shell
-terraform init
-HISTCONTROL=ignorespace
-PRIVATE_ISSUER_PASSWORD=supersecretpassword
-SMTP_PASSWORD=supersecretpasswordagain
-YUBIHSM_PIN=0x04d2abc
-terraform apply -var private_issuer_password="${PRIVATE_ISSUER_PASSWORD}" -var smtp_password="${SMTP_PASSWORD}" -var yubihsm_pin="${YUBIHSM_PIN}"
-```
+What changed in substance, beyond the layout: plain RDS PostgreSQL instead of
+Aurora; the platform's databases and Kubernetes secrets are created by an
+in-cluster Job instead of by hand and by Terraform data sources, so no
+secret value is in state; the load balancer controller is a pinned
+`helm_release` and the EBS CSI driver an EKS managed addon with its own IRSA
+role, replacing `local-exec` and `kubectl apply` from a floating ref; the
+default StorageClass is encrypted gp3; the module can create the VPC.
+Variables were renamed to match: `default_name` → `name`,
+`security_groups_cidr_blocks` → `api_public_access_cidrs`, `k8s_namespace` →
+`namespace`, `subnets_public`/`subnets_private`/`vpc` →
+`public_subnet_ids`/`private_subnet_ids`/`vpc_id` with `create_vpc = false`.
+Not carried over: the YubiHSM PIN plumbing (KMS is the key manager on this
+path), the `*.logs` record, the ICMP security group rules and the SCIM
+temporary key script, and the `linkerd_inject` toggle (the namespace is created
+without injection annotations; annotate it yourself if you run Linkerd
+deliberately).
