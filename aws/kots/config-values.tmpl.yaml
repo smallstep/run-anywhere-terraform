@@ -104,6 +104,18 @@ spec:
       value: "%TECH_CONTACT%"
     update_trust_bundle:
       value: "%UPDATE_TRUST_BUNDLE%"
+    # The SCEP service answers on *.scep.<base_domain>, one hostname per team.
+    # Let's Encrypt issues that wildcard only through DNS-01, which cert-manager
+    # solves with the modules/iam-cert-manager role against the zone: "1" under
+    # letsencrypt, "0" otherwise (private/selfsigned sign wildcards directly
+    # and the app hides the item). The role ARN and zone ID are always rendered
+    # so a later CERT_ISSUER flip needs no re-render.
+    acme_dns01_enabled:
+      value: "%ACME_DNS01_ENABLED%"
+    acme_dns01_aws_role_arn:
+      value: "%CERT_MANAGER_ROLE_ARN%"
+    acme_dns01_aws_hosted_zone_id:
+      value: "%ROUTE53_ZONE_ID%"
 
     # --- Email (SES SMTP; password lives in the smtp secret) -----------------
     email_from_name:

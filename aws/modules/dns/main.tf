@@ -80,3 +80,17 @@ resource "aws_route53_record" "wildcard_ca" {
   ttl     = 300
   records = var.lobby_eip_public_ips
 }
+
+# SCEP tenants are served at <team-slug>.scep.<domain> — the gateway advertises
+# scep.<domain> as the SCEP domain and mints one hostname per team at runtime.
+# Same reasoning as *.ca: a wildcard covers whatever teams exist. The matching
+# certificate is a wildcard too, which is the whole reason cert-manager needs
+# a DNS-01 role (modules/iam-cert-manager): Let's Encrypt will not issue
+# *.scep.<domain> over the HTTP-01 challenge every other platform name uses.
+resource "aws_route53_record" "wildcard_scep" {
+  zone_id = aws_route53_zone.this.zone_id
+  name    = "*.scep.${var.domain}"
+  type    = "A"
+  ttl     = 300
+  records = var.lobby_eip_public_ips
+}

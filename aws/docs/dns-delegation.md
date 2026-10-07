@@ -59,6 +59,9 @@ dig +short A app.<base_domain> @8.8.8.8
 
 # Optional: the *.ca wildcard, the same probe name `verify STAGE=dns` uses:
 dig +short A probe.ca.<base_domain> @8.8.8.8
+
+# Optional: the *.scep wildcard (SCEP tenants, <team-slug>.scep.<base_domain>):
+dig +short A probe.scep.<base_domain> @8.8.8.8
 ```
 
 When the NS and `app` queries answer, proceed. `make verify STAGE=dns`

@@ -68,6 +68,8 @@ SMTP_HOST="$(out smtp_host)"
 SMTP_PORT="$(out smtp_port)"
 SMTP_USERNAME="$(out smtp_username)"
 LOBBY_EIP_ALLOCATION_IDS="$(out lobby_eip_allocation_ids '.value | join(",")')"
+CERT_MANAGER_ROLE_ARN="$(out cert_manager_role_arn)"
+ROUTE53_ZONE_ID="$(out route53_zone_id)"
 
 CERT_ISSUER="${CERT_ISSUER:-letsencrypt}"
 TECH_CONTACT="$(conf technical_contact_email)"
@@ -84,6 +86,17 @@ EMAIL_FROM_NAME="${EMAIL_FROM_NAME:-Smallstep}"
 case "$CERT_ISSUER" in
   private | selfsigned) UPDATE_TRUST_BUNDLE=1 ;;
   *) UPDATE_TRUST_BUNDLE=0 ;;
+esac
+
+# acme_dns01_enabled follows CERT_ISSUER the same way. The SCEP service
+# answers on *.scep.<base_domain>, and Let's Encrypt issues that wildcard only
+# through a DNS-01 challenge, solved by cert-manager with the
+# modules/iam-cert-manager role against the zone. private/selfsigned sign a
+# wildcard directly and the item is hidden for them; the role ARN and zone ID
+# are rendered regardless so flipping CERT_ISSUER later needs no re-render.
+case "$CERT_ISSUER" in
+  letsencrypt) ACME_DNS01_ENABLED=1 ;;
+  *) ACME_DNS01_ENABLED=0 ;;
 esac
 
 # The state must describe THIS deployment. Stale credentials or a copied
@@ -128,6 +141,9 @@ subst REDIS_HOST "$REDIS_HOST"
 subst REDIS_PORT "$REDIS_PORT"
 subst CERT_ISSUER "$CERT_ISSUER"
 subst UPDATE_TRUST_BUNDLE "$UPDATE_TRUST_BUNDLE"
+subst ACME_DNS01_ENABLED "$ACME_DNS01_ENABLED"
+subst CERT_MANAGER_ROLE_ARN "$CERT_MANAGER_ROLE_ARN"
+subst ROUTE53_ZONE_ID "$ROUTE53_ZONE_ID"
 subst TECH_CONTACT "$TECH_CONTACT"
 subst EMAIL_FROM "$EMAIL_FROM"
 subst EMAIL_FROM_NAME "$EMAIL_FROM_NAME"
@@ -159,6 +175,7 @@ echo "  postgres                 ${RDS_HOST}:${RDS_PORT} (TLS required, user sma
 echo "  redis                    ${REDIS_HOST}:${REDIS_PORT} (TLS + AUTH)"
 echo "  smtp                     ${SMTP_USERNAME}@${SMTP_HOST}:${SMTP_PORT} from ${EMAIL_FROM}"
 echo "  cert_issuer              ${CERT_ISSUER}"
+echo "  acme_dns01_enabled       ${ACME_DNS01_ENABLED}  (cert-manager role ${CERT_MANAGER_ROLE_ARN}, zone ${ROUTE53_ZONE_ID})"
 echo "  technical_contact_email  ${TECH_CONTACT}"
 echo ""
 echo "Next: make kots-install"
