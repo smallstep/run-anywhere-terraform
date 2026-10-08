@@ -237,7 +237,7 @@ stage_dns() {
 
   local eips answers host
   eips="$(tf_out_json platform lobby_eip_public_ips | jq -r '.[]' | sort)"
-  for host in "app.${BASE_DOMAIN}" "probe.ca.${BASE_DOMAIN}"; do
+  for host in "app.${BASE_DOMAIN}" "probe.ca.${BASE_DOMAIN}" "probe.scep.${BASE_DOMAIN}"; do
     answers="$(dig +short A "$host" @1.1.1.1 | grep -E '^[0-9.]+$' | sort || true)"
     if [ "$answers" = "$eips" ]; then
       ok "${host} resolves to exactly the lobby EIP set"

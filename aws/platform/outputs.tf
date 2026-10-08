@@ -102,6 +102,11 @@ output "app_iam_role_arn" {
   value       = module.iam_app.app_role_arn
 }
 
+output "cert_manager_role_arn" {
+  description = "The IRSA role cert-manager assumes to solve DNS-01 challenges for the SCEP wildcard certificate — KOTS config https_settings.acme_dns01_aws_role_arn."
+  value       = module.iam_cert_manager.role_arn
+}
+
 # --- KMS ---------------------------------------------------------------------
 
 output "platform_kms_key_arn" {

@@ -93,6 +93,15 @@ module "iam_app" {
   gateway_jwt_key_arn = module.kms.gateway_jwt_key_arn
 }
 
+module "iam_cert_manager" {
+  source = "../modules/iam-cert-manager"
+
+  name              = var.name
+  namespace         = var.namespace
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  zone_id           = module.dns.zone_id
+}
+
 module "ses_smtp" {
   source = "../modules/ses-smtp"
 
